@@ -1,3 +1,7 @@
+body {
+  /* Adicionamos uma cor de fundo óbvia para sabermos que esta é a versão de testes */
+  background-color: #FFFACD; /* Um amarelo-limão pálido */
+}
 /* --- 1. DEFINIÇÕES GLOBAIS E VARIÁVEIS --- */
 :root {
   --blue-600: #2563eb;
