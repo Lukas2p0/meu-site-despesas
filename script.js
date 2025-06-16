@@ -42,6 +42,49 @@ function openTab(evt, tabName) {
   evt.currentTarget.classList.add("active");
 }
 
+// =================================================================================
+// LÓGICA DE PARTILHA DE IMAGEM (CENTRALIZADA E CORRIGIDA)
+// =================================================================================
+
+async function gerarEPartilharImagem(htmlParaImagem, nomeFicheiro) {
+    const containerPartilha = document.getElementById('imagem-a-partilhar');
+    const conteudoPartilha = document.getElementById('conteudo-imagem');
+    
+    conteudoPartilha.innerHTML = htmlParaImagem;
+    containerPartilha.style.display = 'block';
+
+    try {
+        const canvas = await html2canvas(containerPartilha, { scale: 2, useCORS: true });
+        canvas.toBlob(async (blob) => {
+            if (navigator.canShare && navigator.canShare({ files: [new File([blob], nomeFicheiro, { type: 'image/png' })] })) {
+                try {
+                    await navigator.share({
+                        files: [new File([blob], nomeFicheiro, { type: 'image/png' })]
+                    });
+                } catch (err) {
+                    // O erro "AbortError" acontece se o utilizador fechar a janela de partilha. Não mostramos alerta para isso.
+                    if (err.name !== 'AbortError') {
+                        console.error('Erro ao partilhar:', err);
+                        alert('Ocorreu um erro ao tentar partilhar a imagem.');
+                    }
+                }
+            } else {
+                // Fallback para download em computadores ou navegadores não compatíveis
+                const link = document.createElement('a');
+                link.download = nomeFicheiro;
+                link.href = URL.createObjectURL(blob);
+                link.click();
+                URL.revokeObjectURL(link.href);
+            }
+        }, 'image/png');
+    } catch (err) {
+        console.error('Erro ao gerar a imagem:', err);
+        alert('Ocorreu um erro ao tentar gerar a imagem.');
+    } finally {
+        containerPartilha.style.display = 'none';
+    }
+}
+
 
 // =================================================================================
 // LÓGICA DO SEPARADOR DESPESAS E GRUPOS
@@ -316,234 +359,4 @@ function atualizar() {
   const transacoes = calcularTransacoes();
   let htmlReembolsos = `<div class="card-header"><h2 class="card-title">Acerto de Contas</h2></div>`;
   if (participantes.length > 0 && transacoes.length > 0) {
-      htmlReembolsos += `<div class="table-wrapper"><table><thead><tr><th>Transação Sugerida</th></tr></thead><tbody>`;
-      transacoes.forEach(t => { htmlReembolsos += `<tr><td>${t}</td></tr>`; });
-      htmlReembolsos += `</tbody></table></div><div class="card-footer"><button onclick="guardar()" class="btn btn-primary">${editandoIndex !== null ? 'Guardar Alterações' : 'Guardar Evento'}</button><button onclick="partilharReembolsos()" class="btn btn-secondary">Partilhar Reembolsos</button></div>`;
-  } else if (participantes.length > 0) {
-      htmlReembolsos += `<div class="card-body"><p>Não são necessários reembolsos.</p></div> <div class="card-footer"><button onclick="guardar()" class="btn btn-primary">${editandoIndex !== null ? 'Guardar Alterações' : 'Guardar Evento'}</button></div>`;
-  } else {
-      htmlReembolsos += '<div class="card-body"><p>Adicione participantes para ver as sugestões.</p></div>';
-  }
-  document.getElementById('reembolsos').innerHTML = htmlReembolsos;
-}
-
-async function partilharReembolsos() {
-    const transacoes = calcularTransacoes();
-    if (transacoes.length === 0 && participantes.length > 0) {
-        alert("Não há reembolsos para partilhar, as contas estão equilibradas!");
-        return;
-    }
-    if (transacoes.length === 0) {
-        alert("Não há nada para partilhar.");
-        return;
-    }
-    
-    const containerPartilha = document.getElementById('imagem-a-partilhar');
-    const conteudoPartilha = document.getElementById('conteudo-imagem');
-    const nomeEvento = document.getElementById('evento').value || "Acerto de Contas";
-    
-    let transacoesHtml = transacoes.map(t => `<p style="font-size: 1.1rem; text-align: left;">${t}</p>`).join('');
-
-    conteudoPartilha.innerHTML = `
-      <div style="padding: 1rem;">
-        <h2 style="text-align: center; color: var(--heading); margin-bottom: 1.5rem;">💸 Reembolsos: ${nomeEvento}</h2>
-        ${transacoesHtml}
-      </div>
-    `;
-    
-    containerPartilha.style.display = 'block';
-
-    try {
-        const canvas = await html2canvas(containerPartilha, { scale: 2 });
-        canvas.toBlob(async (blob) => {
-            if (navigator.share) {
-                try {
-                    await navigator.share({
-                        files: [new File([blob], 'reembolsos.png', { type: 'image/png' })]
-                    });
-                } catch (err) { console.error('Erro ao partilhar:', err); }
-            } else {
-                const link = document.createElement('a');
-                link.download = 'reembolsos.png';
-                link.href = URL.createObjectURL(blob);
-                link.click();
-                URL.revokeObjectURL(link.href);
-            }
-        }, 'image/png');
-    } catch (err) {
-        console.error('Erro ao gerar a imagem:', err);
-        alert('Ocorreu um erro ao tentar gerar a imagem.');
-    } finally {
-        containerPartilha.style.display = 'none';
-    }
-}
-
-// =================================================================================
-// LÓGICA DO SEPARADOR REFEIÇÕES
-// =================================================================================
-let historicoRefeicoes = JSON.parse(localStorage.getItem("historicoRefeicoes")) || [];
-let ultimoCalculoRefeicao = null;
-
-const pesosEquivalentes = {
-    Bifanas: 80,
-    Entremeadas: 70,
-    Hambúrgueres: 110,
-    Salsichas: 60,
-};
-
-function calcularRefeicao() {
-    const adultos = parseInt(document.getElementById('num-adultos').value) || 0;
-    const criancas = parseInt(document.getElementById('num-criancas').value) || 0;
-    
-    document.getElementById('ajuste-fino-container').style.display = 'none';
-    document.getElementById('ajuste-mulheres').value = '';
-    document.getElementById('ajuste-comiloes').value = '';
-
-    const resultado = calcularQuantidades(adultos, criancas);
-    renderizarResultadoRefeicao(resultado, adultos, criancas);
-}
-
-function reajustarCarnes() {
-    const adultosBase = parseInt(document.getElementById('num-adultos').value) || 0;
-    const criancas = parseInt(document.getElementById('num-criancas').value) || 0;
-    
-    const numMulheres = parseInt(document.getElementById('ajuste-mulheres').value) || 0;
-    const numComiloes = parseInt(document.getElementById('ajuste-comiloes').value) || 0;
-
-    if (numMulheres + numComiloes > adultosBase) {
-        alert("O número de mulheres e 'comilões' não pode exceder o número total de adultos.");
-        return;
-    }
-
-    const numNormais = adultosBase - numMulheres - numComiloes;
-    const adultosEquivalentes = (numNormais * 1) + (numMulheres * (2/3)) + (numComiloes * 1.5);
-    
-    const resultado = calcularQuantidades(adultosBase, criancas, adultosEquivalentes);
-    renderizarResultadoRefeicao(resultado, adultosBase, criancas);
-}
-
-function calcularQuantidades(adultos, criancas, adultosEquivalentesParaCarne = null) {
-    const totalPessoas = adultos + criancas;
-    const adultosParaCarne = adultosEquivalentesParaCarne !== null ? adultosEquivalentesParaCarne : adultos;
-
-    const querCerveja = document.getElementById('check-cerveja').checked;
-    const querVinho = document.getElementById('check-vinho').checked;
-    const querSumosAdultos = document.getElementById('check-sumos-adultos').checked;
-    const querAzeitonas = document.getElementById('check-azeitonas').checked;
-    const querPate = document.getElementById('check-pate').checked;
-    const querChourico = document.getElementById('check-chourico').checked;
-    const querArroz = document.getElementById('check-arroz').checked;
-    const querSalada = document.getElementById('check-salada').checked;
-    const querPao = document.getElementById('check-pao').checked;
-    const querBolinhas = document.getElementById('check-bolinhas').checked;
-    const querBatatas = document.getElementById('check-batatas').checked;
-    const carnesSelecionadas = Array.from(document.querySelectorAll('input[name="carne"]:checked')).map(cb => cb.value);
-
-    let resultados = { aperitivos: [], bebidas: [], carnes: [], acompanhamentos: [] };
-    
-    if (querAzeitonas) resultados.aperitivos.push({ item: 'Azeitonas', qtd: `${Math.ceil(totalPessoas / 7)} emb.` });
-    if (querPate) resultados.aperitivos.push({ item: 'Patê de Atum', qtd: `${Math.ceil(totalPessoas / 6)} emb.` });
-    if (querChourico) resultados.aperitivos.push({ item: 'Chouriço', qtd: `${Math.ceil(adultos / 6)} unidade(s)` });
-
-    if (querCerveja) resultados.bebidas.push({ item: 'Cerveja', qtd: `${adultos * 3} unidades` });
-    if (querVinho) resultados.bebidas.push({ item: 'Vinho', qtd: `${Math.ceil((adultos / 10) * 3)} garrafa(s)` });
-    
-    let qtdSumos = 0;
-    if (criancas > 0) qtdSumos += Math.ceil(criancas / 3);
-    if (querSumosAdultos) qtdSumos += Math.ceil(adultos / 8);
-    if (qtdSumos > 0) resultados.bebidas.push({ item: 'Sumos', qtd: `${qtdSumos} garrafa(s) (1.5L)`});
-    
-    if (carnesSelecionadas.length > 0) {
-        let apetiteTotalKg = (adultosParaCarne * 0.400) + (criancas * 0.200);
-        
-        const querSalsichas = carnesSelecionadas.includes('Salsichas');
-        let carnesParaBalancear = carnesSelecionadas.filter(c => c !== 'Salsichas');
-        
-        if (querSalsichas) {
-            const qtdSalsichas = Math.ceil(totalPessoas / 2);
-            resultados.carnes.push({ item: 'Salsichas', qtd: `${qtdSalsichas} unidades` });
-            const apetiteConsumido = qtdSalsichas * (pesosEquivalentes.Salsichas / 1000);
-            apetiteTotalKg -= apetiteConsumido;
-        }
-
-        if (carnesParaBalancear.length > 0 && apetiteTotalKg > 0) {
-            const apetitePorTipoKg = apetiteTotalKg / carnesParaBalancear.length;
-            
-            carnesParaBalancear.forEach(carne => {
-                if (pesosEquivalentes[carne]) {
-                    let numUnidades = Math.ceil((apetitePorTipoKg * 1000) / pesosEquivalentes[carne]);
-                    if (carne === 'Hambúrgueres' && carnesSelecionadas.length > 2) {
-                        numUnidades = Math.ceil(numUnidades / 2);
-                    }
-                    resultados.carnes.push({ item: `${carne}`, qtd: `${numUnidades} unidades` });
-                } else {
-                    resultados.carnes.push({ item: `${carne}`, qtd: `${apetitePorTipoKg.toFixed(2)} kg` });
-                }
-            });
-        }
-    }
-    
-    if (querArroz) resultados.acompanhamentos.push({ item: 'Arroz', qtd: `${(((totalPessoas / 3) * 0.2) * 0.8).toFixed(2)} kg (cru)` });
-    if (querSalada) resultados.acompanhamentos.push({ item: 'Salada', qtd: `${Math.ceil(totalPessoas / 6)} kit(s)` });
-    if (querPao) {
-        let qtdPao;
-        if (totalPessoas <= 5) qtdPao = 2;
-        else if (totalPessoas <= 10) qtdPao = 3;
-        else if (totalPessoas <= 15) qtdPao = 4;
-        else if (totalPessoas <= 25) qtdPao = 5;
-        else qtdPao = 6;
-        resultados.acompanhamentos.push({ item: 'Pão (Cacete)', qtd: `${qtdPao} unidades` });
-    }
-    if(querBolinhas) resultados.acompanhamentos.push({ item: 'Bolinhas de Pão', qtd: `${(adultos * 2) + criancas} unidades` });
-    if (querBatatas) resultados.acompanhamentos.push({ item: 'Batatas Fritas', qtd: `${Math.ceil(totalPessoas / 4)} pacote(s)` });
-
-    return resultados;
-}
-
-function renderizarResultadoRefeicao(resultados, adultos, criancas) {
-    const resultadoDiv = document.getElementById('resultado-refeicao');
-    const footerDiv = document.getElementById('refeicao-footer');
-    const ajusteFinoDiv = document.getElementById('ajuste-fino-container');
-    
-    let htmlFinal = '';
-    const categorias = {
-        aperitivos: '🧀 Aperitivos',
-        bebidas: '🍻 Bebidas',
-        carnes: '🥩 Carnes',
-        acompanhamentos: '🥗 Acompanhamentos'
-    };
-
-    let totalResultados = 0;
-    for (const categoria in categorias) {
-        if (resultados[categoria] && resultados[categoria].length > 0) {
-            totalResultados++;
-            htmlFinal += `<h4 class="card-title" style="font-size:1rem; margin-top:1rem;">${categorias[categoria]}</h4>`;
-            resultados[categoria].forEach(r => { htmlFinal += `<p><strong>${r.item}:</strong> ${r.qtd}</p>`; });
-        }
-    }
-
-    if (totalResultados > 0) {
-        resultadoDiv.innerHTML = `<div class="results-container">${htmlFinal}</div>`;
-        footerDiv.style.display = 'flex';
-        ajusteFinoDiv.style.display = 'block';
-        ultimoCalculoRefeicao = { data: new Date().toISOString().split('T')[0], adultos, criancas, resultados };
-    } else {
-        resultadoDiv.innerHTML = '';
-        footerDiv.style.display = 'none';
-        ajusteFinoDiv.style.display = 'none';
-        ultimoCalculoRefeicao = null;
-    }
-}
-
-function limparRefeicao() {
-    document.getElementById('num-adultos').value = 0;
-    document.getElementById('num-criancas').value = 0;
-    document.querySelectorAll('#refeicoes input[type="checkbox"]').forEach(cb => cb.checked = false);
-    document.getElementById('resultado-refeicao').innerHTML = '';
-    document.getElementById('refeicao-footer').style.display = 'none';
-    document.getElementById('ajuste-fino-container').style.display = 'none';
-    ultimoCalculoRefeicao = null;
-}
-
-// ... Resto do ficheiro JS (histórico, compras, etc.) permanece igual ...
-
+      htmlReembolsos += `<div class="
