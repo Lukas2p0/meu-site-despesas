@@ -1,0 +1,27 @@
+{
+  "name": "Calculadora de Despesas",
+  "short_name": "Despesas",
+  "description": "Divida as contas de qualquer evento de forma simples e precisa.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "https://cdn.glitch.global/343f917c-a4c9-4fe0-a894-ffa767319183/icon-192.png.png?v=1749825061753",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn.glitch.global/343f917c-a4c9-4fe0-a894-ffa767319183/icon-512.png.png?v=1749825067303",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn.glitch.global/343f917c-a4c9-4fe0-a894-ffa767319183/icon-512.png.png?v=1749825067303",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
