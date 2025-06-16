@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.tab-button').click();
 
     // Inicia as diferentes secções
-    iniciarNovoEvento(false); // Inicia Despesas sem pedir confirmação
+    iniciarNovoEvento(false);
     renderListaCompras();
     renderizarHistorico('despesas');
     
@@ -215,12 +215,14 @@ function iniciarNovoEvento(confirmar = true) {
 
 function carregarEventoParaEdicao(index, event) {
   event.stopPropagation();
+  const historico = JSON.parse(localStorage.getItem("historicoEventos")) || [];
+  const i = historico.length - 1 - index; // Converte para o índice original
   if (participantes.length > 0 && editandoIndex === null) {
     if (!confirm("Isto irá substituir o evento que está a criar. Deseja continuar?")) return;
   }
   openTab({currentTarget: document.querySelector('.tab-button[onclick*="despesas"]')}, 'despesas');
-  const ev = historicoDespesas[index];
-  editandoIndex = index;
+  const ev = historico[i];
+  editandoIndex = i;
   document.getElementById('evento').value = ev.nomeEvento;
   document.getElementById('data').value = ev.data;
   participantes = ev.balancos.map(b => ({ nome: b.nome, valor: b.valor }));
@@ -343,7 +345,7 @@ async function gerarEPartilharImagem(htmlParaImagem, nomeFicheiro) {
     try {
         const canvas = await html2canvas(containerPartilha, { scale: 2, useCORS: true });
         canvas.toBlob(async (blob) => {
-            if (navigator.canShare && navigator.canShare({ files: [new File([blob], nomeFicheiro, { type: 'image/png' })] })) {
+            if (navigator.share && navigator.canShare({ files: [new File([blob], nomeFicheiro, { type: 'image/png' })] })) {
                 try {
                     await navigator.share({
                         files: [new File([blob], nomeFicheiro, { type: 'image/png' })]
@@ -386,11 +388,9 @@ async function partilharReembolsos() {
     gerarEPartilharImagem(htmlFinal, 'reembolsos.png');
 }
 
-
 // =================================================================================
-// LÓGICA DO SEPARADOR REFEIÇÕES (código restante)
+// LÓGICA DO SEPARADOR REFEIÇÕES
 // =================================================================================
-// O resto das funções (refeições, histórico, compras) permanecem como na resposta anterior.
-// Por favor, copie o resto do script da resposta anterior a partir deste ponto.
-
-// ... (Resto do código completo)
+// (código restante)
+// ... As funções de Refeições, Histórico e Compras seguem aqui.
+// O código completo está na resposta anterior. Por favor, copie a partir deste ponto da resposta anterior.
