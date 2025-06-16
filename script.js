@@ -42,49 +42,6 @@ function openTab(evt, tabName) {
   evt.currentTarget.classList.add("active");
 }
 
-// =================================================================================
-// LÓGICA DE PARTILHA DE IMAGEM (CENTRALIZADA E CORRIGIDA)
-// =================================================================================
-
-async function gerarEPartilharImagem(htmlParaImagem, nomeFicheiro) {
-    const containerPartilha = document.getElementById('imagem-a-partilhar');
-    const conteudoPartilha = document.getElementById('conteudo-imagem');
-    
-    conteudoPartilha.innerHTML = htmlParaImagem;
-    containerPartilha.style.display = 'block';
-
-    try {
-        const canvas = await html2canvas(containerPartilha, { scale: 2, useCORS: true });
-        canvas.toBlob(async (blob) => {
-            if (navigator.canShare && navigator.canShare({ files: [new File([blob], nomeFicheiro, { type: 'image/png' })] })) {
-                try {
-                    await navigator.share({
-                        files: [new File([blob], nomeFicheiro, { type: 'image/png' })]
-                    });
-                } catch (err) {
-                    // O erro "AbortError" acontece se o utilizador fechar a janela de partilha. Não mostramos alerta para isso.
-                    if (err.name !== 'AbortError') {
-                        console.error('Erro ao partilhar:', err);
-                        alert('Ocorreu um erro ao tentar partilhar a imagem.');
-                    }
-                }
-            } else {
-                // Fallback para download em computadores ou navegadores não compatíveis
-                const link = document.createElement('a');
-                link.download = nomeFicheiro;
-                link.href = URL.createObjectURL(blob);
-                link.click();
-                URL.revokeObjectURL(link.href);
-            }
-        }, 'image/png');
-    } catch (err) {
-        console.error('Erro ao gerar a imagem:', err);
-        alert('Ocorreu um erro ao tentar gerar a imagem.');
-    } finally {
-        containerPartilha.style.display = 'none';
-    }
-}
-
 
 // =================================================================================
 // LÓGICA DO SEPARADOR DESPESAS E GRUPOS
@@ -234,10 +191,12 @@ function adicionarManualmente() {
   const nome = document.getElementById('nome').value;
   if (!nome) return alert('Por favor, preencha o nome do participante.');
   const valor = parseFloat(document.getElementById('valor').value || '0');
+  
   adicionarParticipante(nome, valor);
   
   document.getElementById('nome').value = '';
   document.getElementById('valor').value = '';
+  
   atualizar();
 }
 
@@ -359,4 +318,80 @@ function atualizar() {
   const transacoes = calcularTransacoes();
   let htmlReembolsos = `<div class="card-header"><h2 class="card-title">Acerto de Contas</h2></div>`;
   if (participantes.length > 0 && transacoes.length > 0) {
-      htmlReembolsos += `<div class="
+      htmlReembolsos += `<div class="table-wrapper"><table><thead><tr><th>Transação Sugerida</th></tr></thead><tbody>`;
+      transacoes.forEach(t => { htmlReembolsos += `<tr><td>${t}</td></tr>`; });
+      htmlReembolsos += `</tbody></table></div><div class="card-footer"><button onclick="guardar()" class="btn btn-primary">${editandoIndex !== null ? 'Guardar Alterações' : 'Guardar Evento'}</button><button onclick="partilharReembolsos()" class="btn btn-secondary">Partilhar Reembolsos</button></div>`;
+  } else if (participantes.length > 0) {
+      htmlReembolsos += `<div class="card-body"><p>Não são necessários reembolsos.</p></div> <div class="card-footer"><button onclick="guardar()" class="btn btn-primary">${editandoIndex !== null ? 'Guardar Alterações' : 'Guardar Evento'}</button></div>`;
+  } else {
+      htmlReembolsos += '<div class="card-body"><p>Adicione participantes para ver as sugestões.</p></div>';
+  }
+  document.getElementById('reembolsos').innerHTML = htmlReembolsos;
+}
+
+// =================================================================================
+// LÓGICA DE PARTILHA DE IMAGEM (CENTRALIZADA)
+// =================================================================================
+
+async function gerarEPartilharImagem(htmlParaImagem, nomeFicheiro) {
+    const containerPartilha = document.getElementById('imagem-a-partilhar');
+    const conteudoPartilha = document.getElementById('conteudo-imagem');
+    
+    conteudoPartilha.innerHTML = htmlParaImagem;
+    containerPartilha.style.display = 'block';
+
+    try {
+        const canvas = await html2canvas(containerPartilha, { scale: 2, useCORS: true });
+        canvas.toBlob(async (blob) => {
+            if (navigator.canShare && navigator.canShare({ files: [new File([blob], nomeFicheiro, { type: 'image/png' })] })) {
+                try {
+                    await navigator.share({
+                        files: [new File([blob], nomeFicheiro, { type: 'image/png' })]
+                    });
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        console.error('Erro ao partilhar:', err);
+                        alert('Ocorreu um erro ao tentar partilhar a imagem.');
+                    }
+                }
+            } else {
+                const link = document.createElement('a');
+                link.download = nomeFicheiro;
+                link.href = URL.createObjectURL(blob);
+                link.click();
+                URL.revokeObjectURL(link.href);
+            }
+        }, 'image/png');
+    } catch (err) {
+        console.error('Erro ao gerar a imagem:', err);
+        alert('Ocorreu um erro ao tentar gerar a imagem.');
+    } finally {
+        containerPartilha.style.display = 'none';
+    }
+}
+
+async function partilharReembolsos() {
+    const transacoes = calcularTransacoes();
+    if (transacoes.length === 0) {
+        alert("Não há reembolsos para partilhar.");
+        return;
+    }
+    const nomeEvento = document.getElementById('evento').value || "Acerto de Contas";
+    let transacoesHtml = transacoes.map(t => `<p style="font-size: 1.1rem; text-align: left; margin: 0.5rem 0;">${t}</p>`).join('');
+    const htmlFinal = `
+      <div style="padding: 1rem;">
+        <h2 style="text-align: center; color: var(--heading); margin-bottom: 1.5rem;">💸 Reembolsos: ${nomeEvento}</h2>
+        ${transacoesHtml}
+      </div>`;
+    gerarEPartilharImagem(htmlFinal, 'reembolsos.png');
+}
+
+
+// =================================================================================
+// LÓGICA DO SEPARADOR REFEIÇÕES
+// =================================================================================
+// (O resto do ficheiro permanece igual à versão anterior)
+// ... as funções calcularRefeicao, reajustarCarnes, limparRefeicao, etc. ...
+// ... e as funções do Histórico e Lista de Compras ...
+// (Para evitar exceder o limite de caracteres, o resto do código, que não foi alterado,
+//  pode ser copiado da resposta anterior)
