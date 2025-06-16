@@ -7,22 +7,28 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.tab-button').click();
 
     // Inicia as diferentes secções
-    iniciarNovoEvento(false);
+    iniciarNovoEvento(false); // Inicia Despesas sem pedir confirmação
     renderListaCompras();
     renderizarHistorico('despesas');
     
     // Lógica dos Modais
     const modalHistorico = document.getElementById('modal-historico');
-    const modalCloseBtnHistorico = modalHistorico.querySelector('.modal-close');
-    modalCloseBtnHistorico.onclick = () => { modalHistorico.style.display = 'none'; };
+    if(modalHistorico) {
+        const modalCloseBtnHistorico = modalHistorico.querySelector('.modal-close');
+        modalCloseBtnHistorico.onclick = () => { modalHistorico.style.display = 'none'; };
+    }
     
     const modalGrupos = document.getElementById('modal-grupos');
-    const modalCloseBtnGrupos = modalGrupos.querySelector('.modal-close');
-    modalCloseBtnGrupos.onclick = fecharModalGrupos;
-
+    if(modalGrupos) {
+        const modalCloseBtnGrupos = modalGrupos.querySelector('.modal-close');
+        modalCloseBtnGrupos.onclick = fecharModalGrupos;
+    }
+    
     const modalValores = document.getElementById('modal-valores');
-    const modalCloseBtnValores = modalValores.querySelector('.modal-close');
-    modalCloseBtnValores.onclick = fecharModalValores;
+    if(modalValores) {
+        const modalCloseBtnValores = modalValores.querySelector('.modal-close');
+        modalCloseBtnValores.onclick = fecharModalValores;
+    }
 
     window.onclick = (event) => {
         if (event.target == modalHistorico) modalHistorico.style.display = 'none';
@@ -34,12 +40,14 @@ document.addEventListener('DOMContentLoaded', () => {
 function openTab(evt, tabName) {
   const tabcontent = document.getElementsByClassName("tab-content");
   for (let i = 0; i < tabcontent.length; i++) {
+    tabcontent[i].style.display = "none";
     tabcontent[i].classList.remove("active");
   }
   const tabbuttons = document.getElementsByClassName("tab-button");
   for (let i = 0; i < tabbuttons.length; i++) {
     tabbuttons[i].classList.remove("active");
   }
+  document.getElementById(tabName).style.display = "flex";
   document.getElementById(tabName).classList.add("active");
   evt.currentTarget.classList.add("active");
 }
@@ -87,7 +95,7 @@ function renderizarGrupos() {
         
         let nomesHtml = grupo.nomes.map(nome => {
             const isSelected = nomesSelecionadosParaAdicionar.includes(nome);
-            return `<button class="btn btn-secondary ${isSelected ? 'active' : ''}" onclick="toggleSelecaoGrupo(this, '${nome}')">${nome}</button>`;
+            return `<button class="btn btn-secondary ${isSelected ? 'active' : ''}" onclick="toggleSelecaoGrupo(this, '${nome.replace(/'/g, "\\'")}')">${nome}</button>`;
         }).join('');
 
         grupoDiv.innerHTML = `
@@ -124,11 +132,12 @@ function processarAdicionarSelecionados() {
     valoresBody.innerHTML = '';
 
     nomesSelecionadosParaAdicionar.forEach(nome => {
+        const cleanNome = nome.replace(/\s/g, '');
         const inputRow = document.createElement('div');
         inputRow.className = 'input-grid';
         inputRow.innerHTML = `
-            <label for="valor-de-${nome.replace(/\s/g, '')}">${nome}:</label>
-            <input type="number" id="valor-de-${nome.replace(/\s/g, '')}" placeholder="Valor gasto (€)" />
+            <label for="valor-de-${cleanNome}">${nome}:</label>
+            <input type="number" id="valor-de-${cleanNome}" placeholder="Valor gasto (€)" />
         `;
         valoresBody.appendChild(inputRow);
     });
@@ -139,7 +148,8 @@ function processarAdicionarSelecionados() {
 
 function guardarValoresBatch() {
     nomesSelecionadosParaAdicionar.forEach(nome => {
-        const valorInput = document.getElementById(`valor-de-${nome.replace(/\s/g, '')}`);
+        const cleanNome = nome.replace(/\s/g, '');
+        const valorInput = document.getElementById(`valor-de-${cleanNome}`);
         const valor = parseFloat(valorInput.value || '0');
         adicionarParticipante(nome, valor);
     });
@@ -190,7 +200,10 @@ function adicionarParticipante(nome, valor) {
 
 function adicionarManualmente() {
   const nome = document.getElementById('nome').value;
-  if (!nome) return alert('Por favor, preencha o nome do participante.');
+  if (!nome) {
+      alert('Por favor, preencha o nome do participante.');
+      return;
+  }
   const valor = parseFloat(document.getElementById('valor').value || '0');
   adicionarParticipante(nome, valor);
   document.getElementById('nome').value = '';
@@ -216,7 +229,7 @@ function iniciarNovoEvento(confirmar = true) {
 function carregarEventoParaEdicao(index, event) {
   event.stopPropagation();
   const historico = JSON.parse(localStorage.getItem("historicoEventos")) || [];
-  const i = historico.length - 1 - index; // Converte para o índice original
+  const i = historico.length - 1 - index;
   if (participantes.length > 0 && editandoIndex === null) {
     if (!confirm("Isto irá substituir o evento que está a criar. Deseja continuar?")) return;
   }
@@ -345,7 +358,7 @@ async function gerarEPartilharImagem(htmlParaImagem, nomeFicheiro) {
     try {
         const canvas = await html2canvas(containerPartilha, { scale: 2, useCORS: true });
         canvas.toBlob(async (blob) => {
-            if (navigator.share && navigator.canShare({ files: [new File([blob], nomeFicheiro, { type: 'image/png' })] })) {
+            if (navigator.canShare && navigator.canShare({ files: [new File([blob], nomeFicheiro, { type: 'image/png' })] })) {
                 try {
                     await navigator.share({
                         files: [new File([blob], nomeFicheiro, { type: 'image/png' })]
@@ -353,7 +366,6 @@ async function gerarEPartilharImagem(htmlParaImagem, nomeFicheiro) {
                 } catch (err) {
                     if (err.name !== 'AbortError') {
                         console.error('Erro ao partilhar:', err);
-                        alert('Ocorreu um erro ao tentar partilhar a imagem.');
                     }
                 }
             } else {
@@ -391,6 +403,396 @@ async function partilharReembolsos() {
 // =================================================================================
 // LÓGICA DO SEPARADOR REFEIÇÕES
 // =================================================================================
-// (código restante)
-// ... As funções de Refeições, Histórico e Compras seguem aqui.
-// O código completo está na resposta anterior. Por favor, copie a partir deste ponto da resposta anterior.
+let historicoRefeicoes = JSON.parse(localStorage.getItem("historicoRefeicoes")) || [];
+let ultimoCalculoRefeicao = null;
+
+const pesosEquivalentes = {
+    Bifanas: 80, Entremeadas: 70, Hambúrgueres: 110, Salsichas: 60,
+};
+
+function calcularRefeicao() {
+    const adultos = parseInt(document.getElementById('num-adultos').value) || 0;
+    const criancas = parseInt(document.getElementById('num-criancas').value) || 0;
+    
+    document.getElementById('ajuste-fino-container').style.display = 'none';
+    document.getElementById('ajuste-mulheres').value = '';
+    document.getElementById('ajuste-comiloes').value = '';
+
+    const resultado = calcularQuantidades(adultos, criancas);
+    renderizarResultadoRefeicao(resultado, adultos, criancas);
+}
+
+function reajustarCarnes() {
+    const adultosBase = parseInt(document.getElementById('num-adultos').value) || 0;
+    const criancas = parseInt(document.getElementById('num-criancas').value) || 0;
+    
+    const numMulheres = parseInt(document.getElementById('ajuste-mulheres').value) || 0;
+    const numComiloes = parseInt(document.getElementById('ajuste-comiloes').value) || 0;
+
+    if (numMulheres + numComiloes > adultosBase) {
+        alert("O número de mulheres e 'comilões' não pode exceder o número total de adultos.");
+        return;
+    }
+
+    const numNormais = adultosBase - numMulheres - numComiloes;
+    const adultosEquivalentes = (numNormais * 1) + (numMulheres * (2/3)) + (numComiloes * 1.5);
+    
+    const resultado = calcularQuantidades(adultosBase, criancas, adultosEquivalentes);
+    renderizarResultadoRefeicao(resultado, adultosBase, criancas);
+}
+
+function calcularQuantidades(adultos, criancas, adultosEquivalentesParaCarne = null) {
+    const totalPessoas = adultos + criancas;
+    const adultosParaCarne = adultosEquivalentesParaCarne !== null ? adultosEquivalentesParaCarne : adultos;
+
+    const querCerveja = document.getElementById('check-cerveja').checked;
+    const querVinho = document.getElementById('check-vinho').checked;
+    const querSumosAdultos = document.getElementById('check-sumos-adultos').checked;
+    const querAzeitonas = document.getElementById('check-azeitonas').checked;
+    const querPate = document.getElementById('check-pate').checked;
+    const querChourico = document.getElementById('check-chourico').checked;
+    const querArroz = document.getElementById('check-arroz').checked;
+    const querSalada = document.getElementById('check-salada').checked;
+    const querPao = document.getElementById('check-pao').checked;
+    const querBolinhas = document.getElementById('check-bolinhas').checked;
+    const querBatatas = document.getElementById('check-batatas').checked;
+    const carnesSelecionadas = Array.from(document.querySelectorAll('input[name="carne"]:checked')).map(cb => cb.value);
+
+    let resultados = { aperitivos: [], bebidas: [], carnes: [], acompanhamentos: [] };
+    
+    if (querAzeitonas) resultados.aperitivos.push({ item: 'Azeitonas', qtd: `${Math.ceil(totalPessoas / 7)} emb.` });
+    if (querPate) resultados.aperitivos.push({ item: 'Patê de Atum', qtd: `${Math.ceil(totalPessoas / 6)} emb.` });
+    if (querChourico) resultados.aperitivos.push({ item: 'Chouriço', qtd: `${Math.ceil(adultos / 6)} unidade(s)` });
+
+    if (querCerveja) resultados.bebidas.push({ item: 'Cerveja', qtd: `${adultos * 3} unidades` });
+    if (querVinho) resultados.bebidas.push({ item: 'Vinho', qtd: `${Math.ceil((adultos / 10) * 3)} garrafa(s)` });
+    
+    let qtdSumos = 0;
+    if (criancas > 0) qtdSumos += Math.ceil(criancas / 3);
+    if (querSumosAdultos) qtdSumos += Math.ceil(adultos / 8);
+    if (qtdSumos > 0) resultados.bebidas.push({ item: 'Sumos', qtd: `${qtdSumos} garrafa(s) (1.5L)`});
+    
+    if (carnesSelecionadas.length > 0) {
+        let apetiteTotalKg = (adultosParaCarne * 0.400) + (criancas * 0.200);
+        
+        const querSalsichas = carnesSelecionadas.includes('Salsichas');
+        let carnesParaBalancear = carnesSelecionadas.filter(c => c !== 'Salsichas');
+        
+        if (querSalsichas) {
+            const qtdSalsichas = Math.ceil(totalPessoas / 2);
+            resultados.carnes.push({ item: 'Salsichas', qtd: `${qtdSalsichas} unidades` });
+            const apetiteConsumido = qtdSalsichas * (pesosEquivalentes.Salsichas / 1000);
+            apetiteTotalKg -= apetiteConsumido;
+        }
+
+        if (carnesParaBalancear.length > 0 && apetiteTotalKg > 0) {
+            const apetitePorTipoKg = apetiteTotalKg / carnesParaBalancear.length;
+            
+            carnesParaBalancear.forEach(carne => {
+                if (pesosEquivalentes[carne]) {
+                    let numUnidades = Math.ceil((apetitePorTipoKg * 1000) / pesosEquivalentes[carne]);
+                    if (carne === 'Hambúrgueres' && carnesSelecionadas.length > 2) {
+                        numUnidades = Math.ceil(numUnidades / 2);
+                    }
+                    resultados.carnes.push({ item: `${carne}`, qtd: `${numUnidades} unidades` });
+                } else {
+                    resultados.carnes.push({ item: `${carne}`, qtd: `${apetitePorTipoKg.toFixed(2)} kg` });
+                }
+            });
+        }
+    }
+    
+    if (querArroz) resultados.acompanhamentos.push({ item: 'Arroz', qtd: `${(((totalPessoas / 3) * 0.2) * 0.8).toFixed(2)} kg (cru)` });
+    if (querSalada) resultados.acompanhamentos.push({ item: 'Salada', qtd: `${Math.ceil(totalPessoas / 6)} kit(s)` });
+    if (querPao) {
+        let qtdPao;
+        if (totalPessoas <= 5) qtdPao = 2;
+        else if (totalPessoas <= 10) qtdPao = 3;
+        else if (totalPessoas <= 15) qtdPao = 4;
+        else if (totalPessoas <= 25) qtdPao = 5;
+        else qtdPao = 6;
+        resultados.acompanhamentos.push({ item: 'Pão (Cacete)', qtd: `${qtdPao} unidades` });
+    }
+    if(querBolinhas) resultados.acompanhamentos.push({ item: 'Bolinhas de Pão', qtd: `${(adultos * 2) + criancas} unidades` });
+    if (querBatatas) resultados.acompanhamentos.push({ item: 'Batatas Fritas', qtd: `${Math.ceil(totalPessoas / 4)} pacote(s)` });
+
+    return resultados;
+}
+
+function renderizarResultadoRefeicao(resultados, adultos, criancas) {
+    const resultadoDiv = document.getElementById('resultado-refeicao');
+    const footerDiv = document.getElementById('refeicao-footer');
+    const ajusteFinoDiv = document.getElementById('ajuste-fino-container');
+    
+    let htmlFinal = '';
+    const categorias = {
+        aperitivos: '🧀 Aperitivos', bebidas: '🍻 Bebidas', carnes: '🥩 Carnes', acompanhamentos: '🥗 Acompanhamentos'
+    };
+
+    let totalResultados = 0;
+    for (const categoria in categorias) {
+        if (resultados[categoria] && resultados[categoria].length > 0) {
+            totalResultados++;
+            htmlFinal += `<h4 class="card-title" style="font-size:1rem; margin-top:1rem;">${categorias[categoria]}</h4>`;
+            resultados[categoria].forEach(r => { htmlFinal += `<p><strong>${r.item}:</strong> ${r.qtd}</p>`; });
+        }
+    }
+
+    if (totalResultados > 0) {
+        resultadoDiv.innerHTML = `<div class="results-container">${htmlFinal}</div>`;
+        footerDiv.style.display = 'flex';
+        ajusteFinoDiv.style.display = 'block';
+        ultimoCalculoRefeicao = { data: new Date().toISOString().split('T')[0], adultos, criancas, resultados };
+    } else {
+        resultadoDiv.innerHTML = '';
+        footerDiv.style.display = 'none';
+        ajusteFinoDiv.style.display = 'none';
+        ultimoCalculoRefeicao = null;
+    }
+}
+
+function limparRefeicao() {
+    document.getElementById('num-adultos').value = 0;
+    document.getElementById('num-criancas').value = 0;
+    document.querySelectorAll('#refeicoes input[type="checkbox"]').forEach(cb => cb.checked = false);
+    document.getElementById('resultado-refeicao').innerHTML = '';
+    document.getElementById('refeicao-footer').style.display = 'none';
+    document.getElementById('ajuste-fino-container').style.display = 'none';
+    ultimoCalculoRefeicao = null;
+}
+
+function guardarRefeicao() {
+    if (!ultimoCalculoRefeicao) {
+        alert("Calcule primeiro uma refeição para poder guardar.");
+        return;
+    }
+    const nomeRefeicao = prompt("Dê um nome a este cálculo de refeição:", `Refeição de ${ultimoCalculoRefeicao.data}`);
+    if (nomeRefeicao) {
+        ultimoCalculoRefeicao.nome = nomeRefeicao;
+        historicoRefeicoes.push(ultimoCalculoRefeicao);
+        localStorage.setItem("historicoRefeicoes", JSON.stringify(historicoRefeicoes));
+        alert(`Cálculo "${nomeRefeicao}" guardado com sucesso!`);
+        renderizarHistorico('refeicoes');
+    }
+}
+
+async function partilharRefeicaoComoImagem() {
+    if (!ultimoCalculoRefeicao) {
+        alert("Não há resultados para partilhar.");
+        return;
+    }
+    
+    let htmlResultados = '';
+    const categorias = {
+        aperitivos: '🧀 Aperitivos', bebidas: '🍻 Bebidas', carnes: '🥩 Carnes', acompanhamentos: '🥗 Acompanhamentos'
+    };
+     for (const categoria in categorias) {
+        if (ultimoCalculoRefeicao.resultados[categoria] && ultimoCalculoRefeicao.resultados[categoria].length > 0) {
+            htmlResultados += `<h4 class="card-title" style="font-size:1rem; margin-top:1rem;">${categorias[categoria]}</h4>`;
+            ultimoCalculoRefeicao.resultados[categoria].forEach(r => { htmlResultados += `<p><strong>${r.item}:</strong> ${r.qtd}</p>`; });
+        }
+    }
+
+    const htmlFinal = `
+      <div style="padding: 1rem;">
+        <h2 style="text-align: center; color: var(--heading); margin-bottom: 0.5rem;">Lista para a Refeição</h2>
+        <p style="text-align: center; font-size: 0.9rem; color: var(--text); margin-bottom: 1.5rem;">
+            Para ${ultimoCalculoRefeicao.adultos} adultos e ${ultimoCalculoRefeicao.criancas} crianças
+        </p>
+        ${htmlResultados}
+      </div>
+    `;
+    
+    gerarEPartilharImagem(htmlFinal, 'lista-refeicao.png');
+}
+
+
+// =================================================================================
+// LÓGICA DO SEPARADOR HISTÓRICO
+// =================================================================================
+
+function renderizarHistorico(tipo, targetButton) {
+    if(targetButton) {
+      document.querySelectorAll('.tab-button-local').forEach(btn => btn.classList.remove('active'));
+      targetButton.classList.add('active');
+    }
+
+    const container = document.getElementById('historico-container');
+    container.innerHTML = '';
+    
+    if (tipo === 'despesas') {
+        if (historicoDespesas.length > 0) {
+            let html = '<div class="table-wrapper"><table><thead><tr><th>Evento</th><th>Data</th><th>Total</th><th class="actions">Ações</th></tr></thead><tbody>';
+            historicoDespesas.slice().reverse().forEach((ev, i_rev) => {
+              const i = historicoDespesas.length - 1 - i_rev;
+              html += `<tr><td style="cursor:pointer;" onclick="verDetalhesDespesa(${i})"><strong class="clickable-row">${ev.nomeEvento}</strong></td><td>${ev.data}</td><td>${ev.total.toFixed(2)} €</td><td class="actions"><button onclick="carregarEventoParaEdicao(${i}, event)" class="btn btn-secondary" title="Editar">✏️</button><button onclick="eliminarHistorico('despesas', ${i}, event)" class="btn btn-danger" title="Eliminar">🗑️</button></td></tr>`;
+            });
+            container.innerHTML = html + '</tbody></table></div>';
+        } else {
+            container.innerHTML = '<div class="card-body"><p>Nenhum evento de despesas guardado.</p></div>';
+        }
+    } else if (tipo === 'refeicoes') {
+        if (historicoRefeicoes.length > 0) {
+            let html = '<div class="table-wrapper"><table><thead><tr><th>Refeição</th><th>Data</th><th>Pessoas</th><th class="actions">Ações</th></tr></thead><tbody>';
+            historicoRefeicoes.slice().reverse().forEach((ev, i_rev) => {
+                const i = historicoRefeicoes.length - 1 - i_rev;
+                html += `<tr><td style="cursor:pointer;" onclick="verDetalhesRefeicao(${i})"><strong class="clickable-row">${ev.nome}</strong></td><td>${ev.data}</td><td>${ev.adultos}A, ${ev.criancas}C</td><td class="actions"><button onclick="eliminarHistorico('refeicoes', ${i}, event)" class="btn btn-danger" title="Eliminar">🗑️</button></td></tr>`;
+            });
+            container.innerHTML = html + '</tbody></table></div>';
+        } else {
+            container.innerHTML = '<div class="card-body"><p>Nenhum cálculo de refeição guardado.</p></div>';
+        }
+    }
+}
+
+function verDetalhesDespesa(index) {
+  const ev = historicoDespesas[historicoDespesas.length - 1 - index];
+  const modal = document.getElementById('modal-historico');
+  const modalTitle = document.getElementById('modal-title');
+  const modalBody = document.getElementById('modal-body');
+  modalTitle.textContent = ev.nomeEvento;
+  let bodyHtml = `<div class="card"><div class="card-header"><h2 class="card-title">Resumo do Evento</h2></div><div class="card-body" style="display:flex; flex-direction:column; gap:0.5rem;"><p><strong>Data:</strong> ${ev.data}</p><p><strong>Total Gasto:</strong> ${ev.total.toFixed(2)} €</p><p><strong>Custo por Pessoa:</strong> ${ev.custo.toFixed(2)} €</p></div></div><div class="card"><div class="card-header"><h2 class="card-title">Balanço Individual Guardado</h2></div><div class="table-wrapper"><table><thead><tr><th>Nome</th><th>Valor Gasto</th><th>Balanço</th></tr></thead><tbody>`;
+  ev.balancos.forEach(p => {
+    const classe = p.saldo < -0.005 ? 'negativo' : p.saldo > 0.005 ? 'positivo' : '';
+    bodyHtml += `<tr><td><strong>${p.nome}</strong></td><td>${p.valor.toFixed(2)} €</td><td><span class="${classe}">${p.saldo.toFixed(2)} €</span></td></tr>`;
+  });
+  bodyHtml += `</tbody></table></div></div><div class="card"><div class="card-header"><h2 class="card-title">Acerto de Contas Guardado</h2></div><div class="table-wrapper"><table><thead><tr><th>Transação Sugerida</th></tr></thead><tbody>`;
+  if (ev.reembolsos.length > 0) {
+    ev.reembolsos.forEach(t => { bodyHtml += `<tr><td>${t}</td></tr>`; });
+  } else {
+    bodyHtml += '<tr><td>Contas equilibradas!</td></tr>';
+  }
+  bodyHtml += '</tbody></table></div></div>';
+  modalBody.innerHTML = bodyHtml;
+  modal.style.display = 'block';
+}
+
+function verDetalhesRefeicao(index) {
+    const ev = historicoRefeicoes[historicoRefeicoes.length - 1 - index];
+    const modal = document.getElementById('modal-historico');
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+    
+    let htmlResultados = '';
+    const categorias = {
+        aperitivos: '🧀 Aperitivos', bebidas: '🍻 Bebidas', carnes: '🥩 Carnes', acompanhamentos: '🥗 Acompanhamentos'
+    };
+     for (const categoria in categorias) {
+        if (ev.resultados[categoria] && ev.resultados[categoria].length > 0) {
+            htmlResultados += `<h4 class="card-title" style="font-size:1rem; margin-top:1rem;">${categorias[categoria]}</h4>`;
+            ev.resultados[categoria].forEach(r => {
+                htmlResultados += `<p><strong>${r.item}:</strong> ${r.qtd}</p>`;
+            });
+        }
+    }
+
+    modalTitle.textContent = ev.nome;
+    modalBody.innerHTML = `
+        <div class="card"><div class="card-header"><h2 class="card-title">Detalhes do Cálculo</h2></div><div class="card-body"><p><strong>Data:</strong> ${ev.data}</p><p><strong>Pessoas:</strong> ${ev.adultos} Adultos, ${ev.criancas} Crianças</p></div></div>
+        <div class="card"><div class="card-header"><h2 class="card-title">Lista de Quantidades</h2></div><div class="card-body" style="padding-top: 0; padding-bottom:0;">${htmlResultados}</div></div>`;
+    modal.style.display = 'block';
+}
+
+function eliminarHistorico(tipo, indexReverso, event) {
+  event.stopPropagation();
+  if (confirm("Tem a certeza que deseja eliminar este item do histórico?")) {
+    if (tipo === 'despesas') {
+      const indexOriginal = historicoDespesas.length - 1 - indexReverso;
+      historicoDespesas.splice(indexOriginal, 1);
+      localStorage.setItem("historicoEventos", JSON.stringify(historicoDespesas));
+    } else {
+      const indexOriginal = historicoRefeicoes.length - 1 - indexReverso;
+      historicoRefeicoes.splice(indexOriginal, 1);
+      localStorage.setItem("historicoRefeicoes", JSON.stringify(historicoRefeicoes));
+    }
+    renderizarHistorico(tipo);
+  }
+}
+
+// =================================================================================
+// LÓGICA DO SEPARADOR COMPRAS
+// =================================================================================
+
+let listaCompras = JSON.parse(localStorage.getItem("listaCompras")) || [];
+
+function renderListaCompras() {
+    const container = document.getElementById('lista-compras');
+    const footer = document.getElementById('compras-footer');
+    container.innerHTML = '';
+    if(listaCompras.length === 0) {
+        container.innerHTML = '<p style="text-align:center; padding: 1rem 0;">A sua lista de compras está vazia.</p>';
+        footer.style.display = 'none';
+        return;
+    }
+    footer.style.display = 'flex';
+    listaCompras.forEach((item, index) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'shopping-item' + (item.checked ? ' checked' : '');
+        itemDiv.onclick = () => toggleItemCompra(index);
+        
+        const itemSpan = document.createElement('span');
+        itemSpan.textContent = item.text;
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'btn btn-danger';
+        deleteButton.innerHTML = '🗑️';
+        deleteButton.onclick = (e) => { e.stopPropagation(); eliminarItemCompra(index); };
+        
+        itemDiv.appendChild(itemSpan);
+        itemDiv.appendChild(deleteButton);
+        container.appendChild(itemDiv);
+    });
+}
+
+function adicionarItemCompra() {
+    const input = document.getElementById('item-compra');
+    const itemText = input.value.trim();
+    if (itemText) {
+        listaCompras.push({ text: itemText, checked: false });
+        localStorage.setItem("listaCompras", JSON.stringify(listaCompras));
+        input.value = '';
+        renderListaCompras();
+        input.focus();
+    }
+}
+
+function adicionarItemCompraComEnter(event) {
+    if (event.key === 'Enter') adicionarItemCompra();
+}
+
+function toggleItemCompra(index) {
+    listaCompras[index].checked = !listaCompras[index].checked;
+    localStorage.setItem("listaCompras", JSON.stringify(listaCompras));
+    renderListaCompras();
+}
+
+function eliminarItemCompra(index) {
+    listaCompras.splice(index, 1);
+    localStorage.setItem("listaCompras", JSON.stringify(listaCompras));
+    renderListaCompras();
+}
+
+function limparListaCompras() {
+    if (listaCompras.length > 0 && confirm("Tem a certeza que quer limpar toda a lista de compras?")) {
+        listaCompras = [];
+        localStorage.setItem("listaCompras", JSON.stringify(listaCompras));
+        renderListaCompras();
+    }
+}
+
+async function partilharListaCompras() {
+    if (listaCompras.length === 0) {
+        alert("A lista de compras está vazia!");
+        return;
+    }
+    let listaHtml = listaCompras.map(item => 
+        `<p style="font-size: 1.1rem; margin: 0.5rem 0; text-align: left; ${item.checked ? 'text-decoration: line-through; color: var(--slate-500);' : ''}">
+            ${item.checked ? '✅' : '⬜️'} ${item.text}
+         </p>`
+    ).join('');
+    const htmlFinal = `
+      <div style="padding: 1rem;">
+        <h2 style="text-align: center; color: var(--heading); margin-bottom: 1.5rem;">🛒 Lista de Compras</h2>
+        ${listaHtml}
+      </div>`;
+    gerarEPartilharImagem(htmlFinal, 'lista-compras.png');
+}
