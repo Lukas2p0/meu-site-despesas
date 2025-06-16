@@ -400,9 +400,11 @@ const pesosEquivalentes = {
 function calcularRefeicao() {
     const adultos = parseInt(document.getElementById('num-adultos').value) || 0;
     const criancas = parseInt(document.getElementById('num-criancas').value) || 0;
+    
     document.getElementById('ajuste-fino-container').style.display = 'none';
     document.getElementById('ajuste-mulheres').value = '';
     document.getElementById('ajuste-comiloes').value = '';
+
     const resultado = calcularQuantidades(adultos, criancas);
     renderizarResultadoRefeicao(resultado, adultos, criancas);
 }
@@ -410,14 +412,18 @@ function calcularRefeicao() {
 function reajustarCarnes() {
     const adultosBase = parseInt(document.getElementById('num-adultos').value) || 0;
     const criancas = parseInt(document.getElementById('num-criancas').value) || 0;
+    
     const numMulheres = parseInt(document.getElementById('ajuste-mulheres').value) || 0;
     const numComiloes = parseInt(document.getElementById('ajuste-comiloes').value) || 0;
+
     if (numMulheres + numComiloes > adultosBase) {
         alert("O número de mulheres e 'comilões' não pode exceder o número total de adultos.");
         return;
     }
+
     const numNormais = adultosBase - numMulheres - numComiloes;
     const adultosEquivalentes = (numNormais * 1) + (numMulheres * (2/3)) + (numComiloes * 1.5);
+    
     const resultado = calcularQuantidades(adultosBase, criancas, adultosEquivalentes);
     renderizarResultadoRefeicao(resultado, adultosBase, criancas);
 }
@@ -425,6 +431,7 @@ function reajustarCarnes() {
 function calcularQuantidades(adultos, criancas, adultosEquivalentesParaCarne = null) {
     const totalPessoas = adultos + criancas;
     const adultosParaCarne = adultosEquivalentesParaCarne !== null ? adultosEquivalentesParaCarne : adultos;
+
     const querCerveja = document.getElementById('check-cerveja').checked;
     const querVinho = document.getElementById('check-vinho').checked;
     const querSumosAdultos = document.getElementById('check-sumos-adultos').checked;
@@ -629,7 +636,7 @@ function renderizarHistorico(tipo, targetButton) {
 }
 
 function verDetalhesDespesa(index) {
-  const ev = historicoDespesas[index];
+  const ev = historicoDespesas[historicoDespesas.length - 1 - index];
   const modal = document.getElementById('modal-historico');
   const modalTitle = document.getElementById('modal-title');
   const modalBody = document.getElementById('modal-body');
@@ -651,7 +658,7 @@ function verDetalhesDespesa(index) {
 }
 
 function verDetalhesRefeicao(index) {
-    const ev = historicoRefeicoes[index];
+    const ev = historicoRefeicoes[historicoRefeicoes.length - 1 - index];
     const modal = document.getElementById('modal-historico');
     const modalTitle = document.getElementById('modal-title');
     const modalBody = document.getElementById('modal-body');
