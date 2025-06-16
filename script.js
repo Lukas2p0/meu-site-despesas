@@ -3,45 +3,44 @@
 // =================================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Inicia o primeiro separador
     document.querySelector('.tab-button').click();
-    document.getElementById('data').valueAsDate = new Date();
-    atualizar();
+
+    // Inicia as diferentes secções
+    iniciarNovoEvento(false);
     renderListaCompras();
     renderizarHistorico('despesas');
     
     // Lógica dos Modais
-    const modalHistorico = document.getElementById('modal-historico');
-    const modalCloseBtnHistorico = modalHistorico.querySelector('.modal-close');
-    modalCloseBtnHistorico.onclick = () => { modalHistorico.style.display = 'none'; };
-    
-    const modalGrupos = document.getElementById('modal-grupos');
-    const modalCloseBtnGrupos = modalGrupos.querySelector('.modal-close');
-    modalCloseBtnGrupos.onclick = fecharModalGrupos;
-
-    const modalValores = document.getElementById('modal-valores');
-    const modalCloseBtnValores = modalValores.querySelector('.modal-close');
-    modalCloseBtnValores.onclick = fecharModalValores;
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        const closeBtn = modal.querySelector('.modal-close');
+        if (closeBtn) {
+            closeBtn.onclick = () => { modal.style.display = 'none'; };
+        }
+    });
 
     window.onclick = (event) => {
-        if (event.target == modalHistorico) modalHistorico.style.display = 'none';
-        if (event.target == modalGrupos) fecharModalGrupos();
-        if (event.target == modalValores) fecharModalValores();
+        modals.forEach(modal => {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        });
     };
 });
 
 function openTab(evt, tabName) {
   const tabcontent = document.getElementsByClassName("tab-content");
   for (let i = 0; i < tabcontent.length; i++) {
-    tabcontent[i].classList.remove("active");
+    tabcontent[i].style.display = "none";
   }
   const tabbuttons = document.getElementsByClassName("tab-button");
   for (let i = 0; i < tabbuttons.length; i++) {
     tabbuttons[i].classList.remove("active");
   }
-  document.getElementById(tabName).classList.add("active");
+  document.getElementById(tabName).style.display = "flex";
   evt.currentTarget.classList.add("active");
 }
-
 
 // =================================================================================
 // LÓGICA DO SEPARADOR DESPESAS E GRUPOS
@@ -86,7 +85,7 @@ function renderizarGrupos() {
         
         let nomesHtml = grupo.nomes.map(nome => {
             const isSelected = nomesSelecionadosParaAdicionar.includes(nome);
-            return `<button class="btn btn-secondary ${isSelected ? 'active' : ''}" onclick="toggleSelecaoGrupo(this, '${nome}')">${nome}</button>`;
+            return `<button class="btn btn-secondary ${isSelected ? 'active' : ''}" onclick="toggleSelecaoGrupo(this, '${nome.replace(/'/g, "\\'")}')">${nome}</button>`;
         }).join('');
 
         grupoDiv.innerHTML = `
@@ -123,11 +122,12 @@ function processarAdicionarSelecionados() {
     valoresBody.innerHTML = '';
 
     nomesSelecionadosParaAdicionar.forEach(nome => {
+        const cleanNome = nome.replace(/[^a-zA-Z0-9]/g, '');
         const inputRow = document.createElement('div');
         inputRow.className = 'input-grid';
         inputRow.innerHTML = `
-            <label for="valor-de-${nome.replace(/\s/g, '')}">${nome}:</label>
-            <input type="number" id="valor-de-${nome.replace(/\s/g, '')}" placeholder="Valor gasto (€)" />
+            <label for="valor-de-${cleanNome}">${nome}:</label>
+            <input type="number" id="valor-de-${cleanNome}" placeholder="Valor gasto (€)" />
         `;
         valoresBody.appendChild(inputRow);
     });
@@ -138,7 +138,8 @@ function processarAdicionarSelecionados() {
 
 function guardarValoresBatch() {
     nomesSelecionadosParaAdicionar.forEach(nome => {
-        const valorInput = document.getElementById(`valor-de-${nome.replace(/\s/g, '')}`);
+        const cleanNome = nome.replace(/[^a-zA-Z0-9]/g, '');
+        const valorInput = document.getElementById(`valor-de-${cleanNome}`);
         const valor = parseFloat(valorInput.value || '0');
         adicionarParticipante(nome, valor);
     });
@@ -189,17 +190,19 @@ function adicionarParticipante(nome, valor) {
 
 function adicionarManualmente() {
   const nome = document.getElementById('nome').value;
-  if (!nome) return alert('Por favor, preencha o nome do participante.');
+  if (!nome) {
+      alert('Por favor, preencha o nome do participante.');
+      return;
+  }
   const valor = parseFloat(document.getElementById('valor').value || '0');
   adicionarParticipante(nome, valor);
-  
   document.getElementById('nome').value = '';
   document.getElementById('valor').value = '';
   atualizar();
 }
 
-function iniciarNovoEvento() {
-  if (participantes.length > 0) {
+function iniciarNovoEvento(confirmar = true) {
+  if (confirmar && participantes.length > 0) {
     if (!confirm("Tem a certeza que quer limpar o evento atual? Perderá todos os dados não guardados.")) return;
   }
   participantes = [];
@@ -207,18 +210,22 @@ function iniciarNovoEvento() {
   document.getElementById('evento').value = '';
   document.getElementById('data').valueAsDate = new Date();
   atualizar();
-  window.scrollTo(0, 0);
-  document.getElementById('evento').focus();
+  if (confirmar) {
+      window.scrollTo(0, 0);
+      document.getElementById('evento').focus();
+  }
 }
 
 function carregarEventoParaEdicao(index, event) {
   event.stopPropagation();
+  const historico = JSON.parse(localStorage.getItem("historicoEventos")) || [];
+  const i = historico.length - 1 - index;
   if (participantes.length > 0 && editandoIndex === null) {
     if (!confirm("Isto irá substituir o evento que está a criar. Deseja continuar?")) return;
   }
   openTab({currentTarget: document.querySelector('.tab-button[onclick*="despesas"]')}, 'despesas');
-  const ev = historicoDespesas[index];
-  editandoIndex = index;
+  const ev = historico[i];
+  editandoIndex = i;
   document.getElementById('evento').value = ev.nomeEvento;
   document.getElementById('data').value = ev.data;
   participantes = ev.balancos.map(b => ({ nome: b.nome, valor: b.valor }));
@@ -327,44 +334,30 @@ function atualizar() {
   document.getElementById('reembolsos').innerHTML = htmlReembolsos;
 }
 
-async function partilharReembolsos() {
-    const transacoes = calcularTransacoes();
-    if (transacoes.length === 0 && participantes.length > 0) {
-        alert("Não há reembolsos para partilhar, as contas estão equilibradas!");
-        return;
-    }
-    if (transacoes.length === 0) {
-        alert("Não há nada para partilhar.");
-        return;
-    }
-    
+// =================================================================================
+// LÓGICA DE PARTILHA DE IMAGEM (CENTRALIZADA)
+// =================================================================================
+async function gerarEPartilharImagem(htmlParaImagem, nomeFicheiro) {
     const containerPartilha = document.getElementById('imagem-a-partilhar');
     const conteudoPartilha = document.getElementById('conteudo-imagem');
-    const nomeEvento = document.getElementById('evento').value || "Acerto de Contas";
     
-    let transacoesHtml = transacoes.map(t => `<p style="font-size: 1.1rem; text-align: left;">${t}</p>`).join('');
-
-    conteudoPartilha.innerHTML = `
-      <div style="padding: 1rem;">
-        <h2 style="text-align: center; color: var(--heading); margin-bottom: 1.5rem;">💸 Reembolsos: ${nomeEvento}</h2>
-        ${transacoesHtml}
-      </div>
-    `;
-    
+    conteudoPartilha.innerHTML = htmlParaImagem;
     containerPartilha.style.display = 'block';
 
     try {
-        const canvas = await html2canvas(containerPartilha, { scale: 2 });
+        const canvas = await html2canvas(containerPartilha, { scale: 2, useCORS: true });
         canvas.toBlob(async (blob) => {
-            if (navigator.share) {
+            if (navigator.share && navigator.canShare({ files: [new File([blob], nomeFicheiro, { type: 'image/png' })] })) {
                 try {
                     await navigator.share({
-                        files: [new File([blob], 'reembolsos.png', { type: 'image/png' })]
+                        files: [new File([blob], nomeFicheiro, { type: 'image/png' })]
                     });
-                } catch (err) { console.error('Erro ao partilhar:', err); }
+                } catch (err) {
+                    if (err.name !== 'AbortError') console.error('Erro ao partilhar:', err);
+                }
             } else {
                 const link = document.createElement('a');
-                link.download = 'reembolsos.png';
+                link.download = nomeFicheiro;
                 link.href = URL.createObjectURL(blob);
                 link.click();
                 URL.revokeObjectURL(link.href);
@@ -378,6 +371,22 @@ async function partilharReembolsos() {
     }
 }
 
+async function partilharReembolsos() {
+    const transacoes = calcularTransacoes();
+    if (transacoes.length === 0) {
+        alert("Não há reembolsos para partilhar.");
+        return;
+    }
+    const nomeEvento = document.getElementById('evento').value || "Acerto de Contas";
+    let transacoesHtml = transacoes.map(t => `<p style="font-size: 1.1rem; text-align: left; margin: 0.5rem 0;">${t}</p>`).join('');
+    const htmlFinal = `
+      <div style="padding: 1rem;">
+        <h2 style="text-align: center; color: var(--heading); margin-bottom: 1.5rem;">💸 Reembolsos: ${nomeEvento}</h2>
+        ${transacoesHtml}
+      </div>`;
+    gerarEPartilharImagem(htmlFinal, 'reembolsos.png');
+}
+
 // =================================================================================
 // LÓGICA DO SEPARADOR REFEIÇÕES
 // =================================================================================
@@ -385,20 +394,15 @@ let historicoRefeicoes = JSON.parse(localStorage.getItem("historicoRefeicoes")) 
 let ultimoCalculoRefeicao = null;
 
 const pesosEquivalentes = {
-    Bifanas: 80,
-    Entremeadas: 70,
-    Hambúrgueres: 110,
-    Salsichas: 60,
+    Bifanas: 80, Entremeadas: 70, Hambúrgueres: 110, Salsichas: 60,
 };
 
 function calcularRefeicao() {
     const adultos = parseInt(document.getElementById('num-adultos').value) || 0;
     const criancas = parseInt(document.getElementById('num-criancas').value) || 0;
-    
     document.getElementById('ajuste-fino-container').style.display = 'none';
     document.getElementById('ajuste-mulheres').value = '';
     document.getElementById('ajuste-comiloes').value = '';
-
     const resultado = calcularQuantidades(adultos, criancas);
     renderizarResultadoRefeicao(resultado, adultos, criancas);
 }
@@ -406,18 +410,14 @@ function calcularRefeicao() {
 function reajustarCarnes() {
     const adultosBase = parseInt(document.getElementById('num-adultos').value) || 0;
     const criancas = parseInt(document.getElementById('num-criancas').value) || 0;
-    
     const numMulheres = parseInt(document.getElementById('ajuste-mulheres').value) || 0;
     const numComiloes = parseInt(document.getElementById('ajuste-comiloes').value) || 0;
-
     if (numMulheres + numComiloes > adultosBase) {
         alert("O número de mulheres e 'comilões' não pode exceder o número total de adultos.");
         return;
     }
-
     const numNormais = adultosBase - numMulheres - numComiloes;
     const adultosEquivalentes = (numNormais * 1) + (numMulheres * (2/3)) + (numComiloes * 1.5);
-    
     const resultado = calcularQuantidades(adultosBase, criancas, adultosEquivalentes);
     renderizarResultadoRefeicao(resultado, adultosBase, criancas);
 }
@@ -425,7 +425,6 @@ function reajustarCarnes() {
 function calcularQuantidades(adultos, criancas, adultosEquivalentesParaCarne = null) {
     const totalPessoas = adultos + criancas;
     const adultosParaCarne = adultosEquivalentesParaCarne !== null ? adultosEquivalentesParaCarne : adultos;
-
     const querCerveja = document.getElementById('check-cerveja').checked;
     const querVinho = document.getElementById('check-vinho').checked;
     const querSumosAdultos = document.getElementById('check-sumos-adultos').checked;
@@ -507,10 +506,7 @@ function renderizarResultadoRefeicao(resultados, adultos, criancas) {
     
     let htmlFinal = '';
     const categorias = {
-        aperitivos: '🧀 Aperitivos',
-        bebidas: '🍻 Bebidas',
-        carnes: '🥩 Carnes',
-        acompanhamentos: '🥗 Acompanhamentos'
+        aperitivos: '🧀 Aperitivos', bebidas: '🍻 Bebidas', carnes: '🥩 Carnes', acompanhamentos: '🥗 Acompanhamentos'
     };
 
     let totalResultados = 0;
@@ -545,5 +541,237 @@ function limparRefeicao() {
     ultimoCalculoRefeicao = null;
 }
 
-// ... Resto do ficheiro JS (histórico, compras, etc.) permanece igual ...
+function guardarRefeicao() {
+    if (!ultimoCalculoRefeicao) {
+        alert("Calcule primeiro uma refeição para poder guardar.");
+        return;
+    }
+    const nomeRefeicao = prompt("Dê um nome a este cálculo de refeição:", `Refeição de ${ultimoCalculoRefeicao.data}`);
+    if (nomeRefeicao) {
+        ultimoCalculoRefeicao.nome = nomeRefeicao;
+        historicoRefeicoes.push(ultimoCalculoRefeicao);
+        localStorage.setItem("historicoRefeicoes", JSON.stringify(historicoRefeicoes));
+        alert(`Cálculo "${nomeRefeicao}" guardado com sucesso!`);
+        renderizarHistorico('refeicoes');
+    }
+}
 
+async function partilharRefeicaoComoImagem() {
+    if (!ultimoCalculoRefeicao) {
+        alert("Não há resultados para partilhar.");
+        return;
+    }
+    
+    let htmlResultados = '';
+    const categorias = {
+        aperitivos: '🧀 Aperitivos', bebidas: '🍻 Bebidas', carnes: '🥩 Carnes', acompanhamentos: '🥗 Acompanhamentos'
+    };
+     for (const categoria in categorias) {
+        if (ultimoCalculoRefeicao.resultados[categoria] && ultimoCalculoRefeicao.resultados[categoria].length > 0) {
+            htmlResultados += `<h4 class="card-title" style="font-size:1rem; margin-top:1rem;">${categorias[categoria]}</h4>`;
+            ultimoCalculoRefeicao.resultados[categoria].forEach(r => { htmlResultados += `<p><strong>${r.item}:</strong> ${r.qtd}</p>`; });
+        }
+    }
+
+    const htmlFinal = `
+      <div style="padding: 1rem;">
+        <h2 style="text-align: center; color: var(--heading); margin-bottom: 0.5rem;">Lista para a Refeição</h2>
+        <p style="text-align: center; font-size: 0.9rem; color: var(--text); margin-bottom: 1.5rem;">
+            Para ${ultimoCalculoRefeicao.adultos} adultos e ${ultimoCalculoRefeicao.criancas} crianças
+        </p>
+        ${htmlResultados}
+      </div>
+    `;
+    
+    gerarEPartilharImagem(htmlFinal, 'lista-refeicao.png');
+}
+
+
+// =================================================================================
+// LÓGICA DO SEPARADOR HISTÓRICO
+// =================================================================================
+function renderizarHistorico(tipo, targetButton) {
+    if(targetButton) {
+      document.querySelectorAll('.tab-button-local').forEach(btn => btn.classList.remove('active'));
+      targetButton.classList.add('active');
+    }
+
+    const container = document.getElementById('historico-container');
+    container.innerHTML = '';
+    
+    if (tipo === 'despesas') {
+        const historico = JSON.parse(localStorage.getItem("historicoEventos")) || [];
+        historicoDespesas = historico;
+        if (historico.length > 0) {
+            let html = '<div class="table-wrapper"><table><thead><tr><th>Evento</th><th>Data</th><th>Total</th><th class="actions">Ações</th></tr></thead><tbody>';
+            historico.slice().reverse().forEach((ev, i_rev) => {
+              const i = historico.length - 1 - i_rev;
+              html += `<tr><td style="cursor:pointer;" onclick="verDetalhesDespesa(${i})"><strong class="clickable-row">${ev.nomeEvento}</strong></td><td>${ev.data}</td><td>${ev.total.toFixed(2)} €</td><td class="actions"><button onclick="carregarEventoParaEdicao(${i}, event)" class="btn btn-secondary" title="Editar">✏️</button><button onclick="eliminarHistorico('despesas', ${i}, event)" class="btn btn-danger" title="Eliminar">🗑️</button></td></tr>`;
+            });
+            container.innerHTML = html + '</tbody></table></div>';
+        } else {
+            container.innerHTML = '<div class="card-body"><p>Nenhum evento de despesas guardado.</p></div>';
+        }
+    } else if (tipo === 'refeicoes') {
+        const historico = JSON.parse(localStorage.getItem("historicoRefeicoes")) || [];
+        historicoRefeicoes = historico;
+        if (historico.length > 0) {
+            let html = '<div class="table-wrapper"><table><thead><tr><th>Refeição</th><th>Data</th><th>Pessoas</th><th class="actions">Ações</th></tr></thead><tbody>';
+            historico.slice().reverse().forEach((ev, i_rev) => {
+                const i = historico.length - 1 - i_rev;
+                html += `<tr><td style="cursor:pointer;" onclick="verDetalhesRefeicao(${i})"><strong class="clickable-row">${ev.nome}</strong></td><td>${ev.data}</td><td>${ev.adultos}A, ${ev.criancas}C</td><td class="actions"><button onclick="eliminarHistorico('refeicoes', ${i}, event)" class="btn btn-danger" title="Eliminar">🗑️</button></td></tr>`;
+            });
+            container.innerHTML = html + '</tbody></table></div>';
+        } else {
+            container.innerHTML = '<div class="card-body"><p>Nenhum cálculo de refeição guardado.</p></div>';
+        }
+    }
+}
+
+function verDetalhesDespesa(index) {
+  const ev = historicoDespesas[index];
+  const modal = document.getElementById('modal-historico');
+  const modalTitle = document.getElementById('modal-title');
+  const modalBody = document.getElementById('modal-body');
+  modalTitle.textContent = ev.nomeEvento;
+  let bodyHtml = `<div class="card"><div class="card-header"><h2 class="card-title">Resumo do Evento</h2></div><div class="card-body" style="display:flex; flex-direction:column; gap:0.5rem;"><p><strong>Data:</strong> ${ev.data}</p><p><strong>Total Gasto:</strong> ${ev.total.toFixed(2)} €</p><p><strong>Custo por Pessoa:</strong> ${ev.custo.toFixed(2)} €</p></div></div><div class="card"><div class="card-header"><h2 class="card-title">Balanço Individual Guardado</h2></div><div class="table-wrapper"><table><thead><tr><th>Nome</th><th>Valor Gasto</th><th>Balanço</th></tr></thead><tbody>`;
+  ev.balancos.forEach(p => {
+    const classe = p.saldo < -0.005 ? 'negativo' : p.saldo > 0.005 ? 'positivo' : '';
+    bodyHtml += `<tr><td><strong>${p.nome}</strong></td><td>${p.valor.toFixed(2)} €</td><td><span class="${classe}">${p.saldo.toFixed(2)} €</span></td></tr>`;
+  });
+  bodyHtml += `</tbody></table></div></div><div class="card"><div class="card-header"><h2 class="card-title">Acerto de Contas Guardado</h2></div><div class="table-wrapper"><table><thead><tr><th>Transação Sugerida</th></tr></thead><tbody>`;
+  if (ev.reembolsos.length > 0) {
+    ev.reembolsos.forEach(t => { bodyHtml += `<tr><td>${t}</td></tr>`; });
+  } else {
+    bodyHtml += '<tr><td>Contas equilibradas!</td></tr>';
+  }
+  bodyHtml += '</tbody></table></div></div>';
+  modalBody.innerHTML = bodyHtml;
+  modal.style.display = 'block';
+}
+
+function verDetalhesRefeicao(index) {
+    const ev = historicoRefeicoes[index];
+    const modal = document.getElementById('modal-historico');
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+    let htmlResultados = '';
+    const categorias = {
+        aperitivos: '🧀 Aperitivos', bebidas: '🍻 Bebidas', carnes: '🥩 Carnes', acompanhamentos: '🥗 Acompanhamentos'
+    };
+     for (const categoria in categorias) {
+        if (ev.resultados[categoria] && ev.resultados[categoria].length > 0) {
+            htmlResultados += `<h4 class="card-title" style="font-size:1rem; margin-top:1rem;">${categorias[categoria]}</h4>`;
+            ev.resultados[categoria].forEach(r => {
+                htmlResultados += `<p><strong>${r.item}:</strong> ${r.qtd}</p>`;
+            });
+        }
+    }
+    modalTitle.textContent = ev.nome;
+    modalBody.innerHTML = `
+        <div class="card"><div class="card-header"><h2 class="card-title">Detalhes do Cálculo</h2></div><div class="card-body"><p><strong>Data:</strong> ${ev.data}</p><p><strong>Pessoas:</strong> ${ev.adultos} Adultos, ${ev.criancas} Crianças</p></div></div>
+        <div class="card"><div class="card-header"><h2 class="card-title">Lista de Quantidades</h2></div><div class="card-body" style="padding-top: 0; padding-bottom:0;">${htmlResultados}</div></div>`;
+    modal.style.display = 'block';
+}
+
+function eliminarHistorico(tipo, indexReverso, event) {
+  event.stopPropagation();
+  if (confirm("Tem a certeza que deseja eliminar este item do histórico?")) {
+    if (tipo === 'despesas') {
+      const indexOriginal = historicoDespesas.length - 1 - indexReverso;
+      historicoDespesas.splice(indexOriginal, 1);
+      localStorage.setItem("historicoEventos", JSON.stringify(historicoDespesas));
+    } else {
+      const indexOriginal = historicoRefeicoes.length - 1 - indexReverso;
+      historicoRefeicoes.splice(indexOriginal, 1);
+      localStorage.setItem("historicoRefeicoes", JSON.stringify(historicoRefeicoes));
+    }
+    renderizarHistorico(tipo);
+  }
+}
+
+// =================================================================================
+// LÓGICA DO SEPARADOR COMPRAS
+// =================================================================================
+
+let listaCompras = JSON.parse(localStorage.getItem("listaCompras")) || [];
+
+function renderListaCompras() {
+    const container = document.getElementById('lista-compras');
+    const footer = document.getElementById('compras-footer');
+    container.innerHTML = '';
+    if(listaCompras.length === 0) {
+        container.innerHTML = '<p style="text-align:center; padding: 1rem 0;">A sua lista de compras está vazia.</p>';
+        footer.style.display = 'none';
+        return;
+    }
+    footer.style.display = 'flex';
+    listaCompras.forEach((item, index) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'shopping-item' + (item.checked ? ' checked' : '');
+        itemDiv.onclick = () => toggleItemCompra(index);
+        const itemSpan = document.createElement('span');
+        itemSpan.textContent = item.text;
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'btn btn-danger';
+        deleteButton.innerHTML = '🗑️';
+        deleteButton.onclick = (e) => { e.stopPropagation(); eliminarItemCompra(index); };
+        itemDiv.appendChild(itemSpan);
+        itemDiv.appendChild(deleteButton);
+        container.appendChild(itemDiv);
+    });
+}
+
+function adicionarItemCompra() {
+    const input = document.getElementById('item-compra');
+    const itemText = input.value.trim();
+    if (itemText) {
+        listaCompras.push({ text: itemText, checked: false });
+        localStorage.setItem("listaCompras", JSON.stringify(listaCompras));
+        input.value = '';
+        renderListaCompras();
+        input.focus();
+    }
+}
+
+function adicionarItemCompraComEnter(event) {
+    if (event.key === 'Enter') adicionarItemCompra();
+}
+
+function toggleItemCompra(index) {
+    listaCompras[index].checked = !listaCompras[index].checked;
+    localStorage.setItem("listaCompras", JSON.stringify(listaCompras));
+    renderListaCompras();
+}
+
+function eliminarItemCompra(index) {
+    listaCompras.splice(index, 1);
+    localStorage.setItem("listaCompras", JSON.stringify(listaCompras));
+    renderListaCompras();
+}
+
+function limparListaCompras() {
+    if (listaCompras.length > 0 && confirm("Tem a certeza que quer limpar toda a lista de compras?")) {
+        listaCompras = [];
+        localStorage.setItem("listaCompras", JSON.stringify(listaCompras));
+        renderListaCompras();
+    }
+}
+
+async function partilharListaCompras() {
+    if (listaCompras.length === 0) {
+        alert("A lista de compras está vazia!");
+        return;
+    }
+    let listaHtml = listaCompras.map(item => 
+        `<p style="font-size: 1.1rem; margin: 0.5rem 0; text-align: left; ${item.checked ? 'text-decoration: line-through; color: var(--slate-500);' : ''}">
+            ${item.checked ? '✅' : '⬜️'} ${item.text}
+         </p>`
+    ).join('');
+    const htmlFinal = `
+      <div style="padding: 1rem;">
+        <h2 style="text-align: center; color: var(--heading); margin-bottom: 1.5rem;">🛒 Lista de Compras</h2>
+        ${listaHtml}
+      </div>`;
+    gerarEPartilharImagem(htmlFinal, 'lista-compras.png');
+}
