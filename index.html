@@ -37,6 +37,7 @@
       <div class="tabs">
         <button class="tab-button active" onclick="openTab(event, 'despesas')">💶 Despesas</button>
         <button class="tab-button" onclick="openTab(event, 'refeicoes')">🥩 Refeições</button>
+        <button class="tab-button" onclick="openTab(event, 'sugestoes')">💡 Sugestões</button>
         <button class="tab-button" onclick="openTab(event, 'compras')">🛒 Compras</button>
         <button class="tab-button" onclick="openTab(event, 'historico')">📋 Histórico</button>
       </div>
@@ -134,6 +135,34 @@
             <div id="refeicao-footer" class="card-footer" style="display: none;">
               <button class="btn btn-secondary" onclick="guardarRefeicao()">Guardar no Histórico</button>
               <button class="btn btn-secondary" onclick="partilharRefeicaoComoImagem()">Partilhar como Imagem</button>
+            </div>
+          </div>
+        </div>
+        
+        <div id="sugestoes" class="tab-content">
+          <div class="card">
+            <div id="sugestao-input-container">
+                <div class="card-header"><h2 class="card-title">O que apetece para o jantar?</h2></div>
+                <div class="card-body">
+                    <p class="subtitle" style="text-align:left; margin-bottom:1.5rem;">Selecione alguns ingredientes que tem em casa ou deixe em branco e clique em "Surpreenda-me!".</p>
+                    <div class="selection-grid">
+                        <label class="checkbox-label"><input type="checkbox" name="ingrediente" value="massa"> Massa</label>
+                        <label class="checkbox-label"><input type="checkbox" name="ingrediente" value="carne"> Carne</label>
+                        <label class="checkbox-label"><input type="checkbox" name="ingrediente" value="frango"> Frango</label>
+                        <label class="checkbox-label"><input type="checkbox" name="ingrediente" value="peixe"> Peixe</label>
+                        <label class="checkbox-label"><input type="checkbox" name="ingrediente" value="salada"> Salada</label>
+                        <label class="checkbox-label"><input type="checkbox" name="ingrediente" value="ovos"> Ovos</label>
+                    </div>
+                    <div style="margin-top: 1.5rem;">
+                        <label class="checkbox-label"><input type="checkbox" id="sugestao-rapida"> Tenho pouco tempo</label>
+                    </div>
+                </div>
+                <div class="card-footer" style="justify-content: space-between;">
+                    <button onclick="sugerirJantar(true)" class="btn btn-secondary">Surpreenda-me!</button>
+                    <button onclick="sugerirJantar(false)" class="btn btn-primary">Sugerir Jantar</button>
+                </div>
+            </div>
+            <div id="sugestao-resultado-container" style="display: none;">
             </div>
           </div>
         </div>
