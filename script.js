@@ -42,7 +42,6 @@ function openTab(evt, tabName) {
   evt.currentTarget.classList.add("active");
 }
 
-
 // =================================================================================
 // LÓGICA DO SEPARADOR DESPESAS E GRUPOS
 // =================================================================================
@@ -191,12 +190,9 @@ function adicionarManualmente() {
   const nome = document.getElementById('nome').value;
   if (!nome) return alert('Por favor, preencha o nome do participante.');
   const valor = parseFloat(document.getElementById('valor').value || '0');
-  
   adicionarParticipante(nome, valor);
-  
   document.getElementById('nome').value = '';
   document.getElementById('valor').value = '';
-  
   atualizar();
 }
 
@@ -386,12 +382,7 @@ async function partilharReembolsos() {
     gerarEPartilharImagem(htmlFinal, 'reembolsos.png');
 }
 
-
-// =================================================================================
-// LÓGICA DO SEPARADOR REFEIÇÕES
-// =================================================================================
-// (O resto do ficheiro permanece igual à versão anterior)
-// ... as funções calcularRefeicao, reajustarCarnes, limparRefeicao, etc. ...
-// ... e as funções do Histórico e Lista de Compras ...
-// (Para evitar exceder o limite de caracteres, o resto do código, que não foi alterado,
-//  pode ser copiado da resposta anterior)
+// ... (Resto do código para Refeições, Histórico e Compras)
+// ... O código completo e correto para o resto das funções está na resposta anterior.
+// Por favor, copie e cole as funções de Refeições, Histórico e Compras da resposta anterior
+// para este ficheiro para garantir que tudo funciona.
