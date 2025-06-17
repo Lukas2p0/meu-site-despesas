@@ -61,7 +61,6 @@ body {
 h1 { font-size: 2rem; font-weight: 700; color: var(--heading); margin: 0 0 0.5rem 0; }
 .subtitle { font-size: 1.1rem; color: var(--slate-500); margin: 0; }
 .card-title { font-size: 1.125rem; font-weight: 600; color: var(--heading); margin: 0; display: flex; align-items: center; gap: 0.6rem; }
-.card-title svg { color: var(--primary); flex-shrink: 0; }
 p { line-height: 1.6; margin: 0; }
 .clickable-row { cursor: pointer; font-weight: 600; color: var(--primary); display: inline-block; }
 .clickable-row:hover { text-decoration: underline; }
