@@ -6,23 +6,26 @@
 function carregarDoStorage(chave, valorDefault = []) {
     try {
         const item = localStorage.getItem(chave);
+        // Verifica se o item não é nulo e não é uma string vazia antes de fazer o parse
         return item ? JSON.parse(item) : valorDefault;
     } catch (e) {
-        console.error(`Erro ao carregar '${chave}' do localStorage:`, e);
+        console.error(`Erro ao carregar '${chave}' do localStorage. A usar valor default. Erro:`, e);
         return valorDefault;
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Inicia o primeiro separador
+    // Apenas define os listeners de eventos. A inicialização do conteúdo será feita pelas funções.
+    setupEventListeners();
+    
+    // Inicia a aplicação mostrando o primeiro separador e carregando os dados iniciais
     openTab({ currentTarget: document.querySelector('.tab-button') }, 'despesas');
-
-    // Inicia as diferentes secções
     iniciarNovoEvento(false);
     renderListaCompras();
     renderizarHistorico('despesas');
-    
-    // Lógica dos Modais
+});
+
+function setupEventListeners() {
     const modals = document.querySelectorAll('.modal');
     modals.forEach(modal => {
         const closeBtn = modal.querySelector('.modal-close');
@@ -38,7 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
-});
+}
+
 
 function openTab(evt, tabName) {
   const tabcontent = document.getElementsByClassName("tab-content");
@@ -547,7 +551,6 @@ async function partilharRefeicaoComoImagem() {
         alert("Não há resultados para partilhar.");
         return;
     }
-    
     let htmlResultados = '';
     const categorias = {
         aperitivos: '🧀 Aperitivos', bebidas: '🍻 Bebidas', carnes: '🥩 Carnes', acompanhamentos: '🥗 Acompanhamentos'
@@ -558,7 +561,6 @@ async function partilharRefeicaoComoImagem() {
             ultimoCalculoRefeicao.resultados[categoria].forEach(r => { htmlResultados += `<p><strong>${r.item}:</strong> ${r.qtd}</p>`; });
         }
     }
-
     const htmlFinal = `
       <div style="padding: 1rem;">
         <h2 style="text-align: center; color: var(--heading); margin-bottom: 0.5rem;">Lista para a Refeição</h2>
@@ -568,10 +570,8 @@ async function partilharRefeicaoComoImagem() {
         ${htmlResultados}
       </div>
     `;
-    
     gerarEPartilharImagem(htmlFinal, 'lista-refeicao.png');
 }
-
 
 // =================================================================================
 // LÓGICA DO SEPARADOR HISTÓRICO
@@ -588,7 +588,7 @@ function renderizarHistorico(tipo, targetButton) {
         if (historicoDespesas.length > 0) {
             let html = '<div class="table-wrapper"><table><thead><tr><th>Evento</th><th>Data</th><th>Total</th><th class="actions">Ações</th></tr></thead><tbody>';
             historicoDespesas.slice().reverse().forEach((ev, i_rev) => {
-              const i = historicoDespesas.length - 1 - i_rev;
+              const i = i_rev;
               html += `<tr><td style="cursor:pointer;" onclick="verDetalhesDespesa(${i})"><strong class="clickable-row">${ev.nomeEvento}</strong></td><td>${ev.data}</td><td>${ev.total.toFixed(2)} €</td><td class="actions"><button onclick="carregarEventoParaEdicao(${i}, event)" class="btn btn-secondary" title="Editar">✏️</button><button onclick="eliminarHistorico('despesas', ${i}, event)" class="btn btn-danger" title="Eliminar">🗑️</button></td></tr>`;
             });
             container.innerHTML = html + '</tbody></table></div>';
@@ -600,7 +600,7 @@ function renderizarHistorico(tipo, targetButton) {
         if (historicoRefeicoes.length > 0) {
             let html = '<div class="table-wrapper"><table><thead><tr><th>Refeição</th><th>Data</th><th>Pessoas</th><th class="actions">Ações</th></tr></thead><tbody>';
             historicoRefeicoes.slice().reverse().forEach((ev, i_rev) => {
-                const i = historicoRefeicoes.length - 1 - i_rev;
+                const i = i_rev;
                 html += `<tr><td style="cursor:pointer;" onclick="verDetalhesRefeicao(${i})"><strong class="clickable-row">${ev.nome}</strong></td><td>${ev.data}</td><td>${ev.adultos}A, ${ev.criancas}C</td><td class="actions"><button onclick="eliminarHistorico('refeicoes', ${i}, event)" class="btn btn-danger" title="Eliminar">🗑️</button></td></tr>`;
             });
             container.innerHTML = html + '</tbody></table></div>';
@@ -611,7 +611,7 @@ function renderizarHistorico(tipo, targetButton) {
 }
 
 function verDetalhesDespesa(indexReverso) {
-  const ev = historicoDespesas[historicoDespesas.length - 1 - indexReverso];
+  const ev = historicoDespesas.slice().reverse()[indexReverso];
   const modal = document.getElementById('modal-historico');
   const modalTitle = document.getElementById('modal-title');
   const modalBody = document.getElementById('modal-body');
@@ -633,7 +633,7 @@ function verDetalhesDespesa(indexReverso) {
 }
 
 function verDetalhesRefeicao(indexReverso) {
-    const ev = historicoRefeicoes[historicoRefeicoes.length - 1 - indexReverso];
+    const ev = historicoRefeicoes.slice().reverse()[indexReverso];
     const modal = document.getElementById('modal-historico');
     const modalTitle = document.getElementById('modal-title');
     const modalBody = document.getElementById('modal-body');
@@ -757,6 +757,7 @@ async function partilharListaCompras() {
       </div>`;
     gerarEPartilharImagem(htmlFinal, 'lista-compras.png');
 }
+
 
 // =================================================================================
 // LÓGICA DO SEPARADOR SUGESTÕES DE JANTAR
