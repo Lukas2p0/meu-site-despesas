@@ -2,6 +2,17 @@
 // INICIALIZAÇÃO E LÓGICA GERAL
 // =================================================================================
 
+// Função segura para ler do localStorage
+function carregarDoStorage(chave, valorDefault = []) {
+    try {
+        const item = localStorage.getItem(chave);
+        return item ? JSON.parse(item) : valorDefault;
+    } catch (e) {
+        console.error(`Erro ao carregar '${chave}' do localStorage:`, e);
+        return valorDefault;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Inicia o primeiro separador
     openTab({ currentTarget: document.querySelector('.tab-button') }, 'despesas');
@@ -46,7 +57,7 @@ function openTab(evt, tabName) {
 // LÓGICA DO SEPARADOR DESPESAS E GRUPOS
 // =================================================================================
 let participantes = [];
-let historicoDespesas = JSON.parse(localStorage.getItem("historicoEventos")) || [];
+let historicoDespesas = carregarDoStorage("historicoEventos");
 let editandoIndex = null;
 let nomesSelecionadosParaAdicionar = [];
 
@@ -56,7 +67,7 @@ const listaPredefinidaDefault = [
     { nomes: ["Tiago Louro"] }, { nomes: ["Rui Cresovel", "Inês"] },
     { nomes: ["Vânia Silva"] }, { nomes: ["Rui Moutinho", "Sandra Moutinho"] }
 ];
-let gruposPredefinidos = JSON.parse(localStorage.getItem("gruposPredefinidos")) || listaPredefinidaDefault;
+let gruposPredefinidos = carregarDoStorage("gruposPredefinidos", listaPredefinidaDefault);
 
 function abrirModalGrupos() {
     nomesSelecionadosParaAdicionar = [];
@@ -64,13 +75,8 @@ function abrirModalGrupos() {
     document.getElementById('modal-grupos').style.display = 'block';
 }
 
-function fecharModalGrupos() {
-    document.getElementById('modal-grupos').style.display = 'none';
-}
-
-function fecharModalValores() {
-    document.getElementById('modal-valores').style.display = 'none';
-}
+function fecharModalGrupos() { document.getElementById('modal-grupos').style.display = 'none'; }
+function fecharModalValores() { document.getElementById('modal-valores').style.display = 'none'; }
 
 function renderizarGrupos() {
     const container = document.getElementById('lista-grupos');
@@ -117,21 +123,15 @@ function processarAdicionarSelecionados() {
         alert("Nenhum participante selecionado.");
         return;
     }
-
     const valoresBody = document.getElementById('valores-body');
     valoresBody.innerHTML = '';
-
     nomesSelecionadosParaAdicionar.forEach(nome => {
         const cleanNome = nome.replace(/[^a-zA-Z0-9]/g, '');
         const inputRow = document.createElement('div');
         inputRow.className = 'input-grid';
-        inputRow.innerHTML = `
-            <label for="valor-de-${cleanNome}">${nome}:</label>
-            <input type="number" id="valor-de-${cleanNome}" placeholder="Valor gasto (€)" />
-        `;
+        inputRow.innerHTML = `<label for="valor-de-${cleanNome}">${nome}:</label><input type="number" id="valor-de-${cleanNome}" placeholder="Valor gasto (€)" />`;
         valoresBody.appendChild(inputRow);
     });
-
     fecharModalGrupos();
     document.getElementById('modal-valores').style.display = 'block';
 }
@@ -143,7 +143,6 @@ function guardarValoresBatch() {
         const valor = parseFloat(valorInput.value || '0');
         adicionarParticipante(nome, valor);
     });
-    
     fecharModalValores();
     atualizar();
 }
@@ -218,13 +217,12 @@ function iniciarNovoEvento(confirmar = true) {
 
 function carregarEventoParaEdicao(index, event) {
   event.stopPropagation();
-  const historico = JSON.parse(localStorage.getItem("historicoEventos")) || [];
-  const i = historico.length - 1 - index;
+  const i = historicoDespesas.length - 1 - index;
   if (participantes.length > 0 && editandoIndex === null) {
     if (!confirm("Isto irá substituir o evento que está a criar. Deseja continuar?")) return;
   }
   openTab({currentTarget: document.querySelector('.tab-button[onclick*="despesas"]')}, 'despesas');
-  const ev = historico[i];
+  const ev = historicoDespesas[i];
   editandoIndex = i;
   document.getElementById('evento').value = ev.nomeEvento;
   document.getElementById('data').value = ev.data;
@@ -390,7 +388,7 @@ async function partilharReembolsos() {
 // =================================================================================
 // LÓGICA DO SEPARADOR REFEIÇÕES
 // =================================================================================
-let historicoRefeicoes = JSON.parse(localStorage.getItem("historicoRefeicoes")) || [];
+let historicoRefeicoes = carregarDoStorage("historicoRefeicoes");
 let ultimoCalculoRefeicao = null;
 
 const pesosEquivalentes = {
@@ -560,7 +558,6 @@ async function partilharRefeicaoComoImagem() {
         alert("Não há resultados para partilhar.");
         return;
     }
-    
     let htmlResultados = '';
     const categorias = {
         aperitivos: '🧀 Aperitivos', bebidas: '🍻 Bebidas', carnes: '🥩 Carnes', acompanhamentos: '🥗 Acompanhamentos'
@@ -571,7 +568,6 @@ async function partilharRefeicaoComoImagem() {
             ultimoCalculoRefeicao.resultados[categoria].forEach(r => { htmlResultados += `<p><strong>${r.item}:</strong> ${r.qtd}</p>`; });
         }
     }
-
     const htmlFinal = `
       <div style="padding: 1rem;">
         <h2 style="text-align: center; color: var(--heading); margin-bottom: 0.5rem;">Lista para a Refeição</h2>
@@ -581,7 +577,6 @@ async function partilharRefeicaoComoImagem() {
         ${htmlResultados}
       </div>
     `;
-    
     gerarEPartilharImagem(htmlFinal, 'lista-refeicao.png');
 }
 
@@ -594,17 +589,14 @@ function renderizarHistorico(tipo, targetButton) {
       document.querySelectorAll('.tab-button-local').forEach(btn => btn.classList.remove('active'));
       targetButton.classList.add('active');
     }
-
     const container = document.getElementById('historico-container');
     container.innerHTML = '';
-    
     if (tipo === 'despesas') {
-        const historico = JSON.parse(localStorage.getItem("historicoEventos")) || [];
-        historicoDespesas = historico;
-        if (historico.length > 0) {
+        historicoDespesas = carregarDoStorage("historicoEventos");
+        if (historicoDespesas.length > 0) {
             let html = '<div class="table-wrapper"><table><thead><tr><th>Evento</th><th>Data</th><th>Total</th><th class="actions">Ações</th></tr></thead><tbody>';
-            historico.slice().reverse().forEach((ev, i_rev) => {
-              const i = historico.length - 1 - i_rev;
+            historicoDespesas.slice().reverse().forEach((ev, i_rev) => {
+              const i = historicoDespesas.length - 1 - i_rev;
               html += `<tr><td style="cursor:pointer;" onclick="verDetalhesDespesa(${i})"><strong class="clickable-row">${ev.nomeEvento}</strong></td><td>${ev.data}</td><td>${ev.total.toFixed(2)} €</td><td class="actions"><button onclick="carregarEventoParaEdicao(${i}, event)" class="btn btn-secondary" title="Editar">✏️</button><button onclick="eliminarHistorico('despesas', ${i}, event)" class="btn btn-danger" title="Eliminar">🗑️</button></td></tr>`;
             });
             container.innerHTML = html + '</tbody></table></div>';
@@ -612,12 +604,11 @@ function renderizarHistorico(tipo, targetButton) {
             container.innerHTML = '<div class="card-body"><p>Nenhum evento de despesas guardado.</p></div>';
         }
     } else if (tipo === 'refeicoes') {
-        const historico = JSON.parse(localStorage.getItem("historicoRefeicoes")) || [];
-        historicoRefeicoes = historico;
-        if (historico.length > 0) {
+        historicoRefeicoes = carregarDoStorage("historicoRefeicoes");
+        if (historicoRefeicoes.length > 0) {
             let html = '<div class="table-wrapper"><table><thead><tr><th>Refeição</th><th>Data</th><th>Pessoas</th><th class="actions">Ações</th></tr></thead><tbody>';
-            historico.slice().reverse().forEach((ev, i_rev) => {
-                const i = historico.length - 1 - i_rev;
+            historicoRefeicoes.slice().reverse().forEach((ev, i_rev) => {
+                const i = historicoRefeicoes.length - 1 - i_rev;
                 html += `<tr><td style="cursor:pointer;" onclick="verDetalhesRefeicao(${i})"><strong class="clickable-row">${ev.nome}</strong></td><td>${ev.data}</td><td>${ev.adultos}A, ${ev.criancas}C</td><td class="actions"><button onclick="eliminarHistorico('refeicoes', ${i}, event)" class="btn btn-danger" title="Eliminar">🗑️</button></td></tr>`;
             });
             container.innerHTML = html + '</tbody></table></div>';
@@ -628,8 +619,7 @@ function renderizarHistorico(tipo, targetButton) {
 }
 
 function verDetalhesDespesa(index) {
-  const historico = JSON.parse(localStorage.getItem("historicoEventos")) || [];
-  const ev = historico[historico.length - 1 - index];
+  const ev = historicoDespesas[index];
   const modal = document.getElementById('modal-historico');
   const modalTitle = document.getElementById('modal-title');
   const modalBody = document.getElementById('modal-body');
@@ -651,8 +641,7 @@ function verDetalhesDespesa(index) {
 }
 
 function verDetalhesRefeicao(index) {
-    const historico = JSON.parse(localStorage.getItem("historicoRefeicoes")) || [];
-    const ev = historico[historico.length - 1 - index];
+    const ev = historicoRefeicoes[index];
     const modal = document.getElementById('modal-historico');
     const modalTitle = document.getElementById('modal-title');
     const modalBody = document.getElementById('modal-body');
@@ -695,7 +684,7 @@ function eliminarHistorico(tipo, indexReverso, event) {
 // LÓGICA DO SEPARADOR COMPRAS
 // =================================================================================
 
-let listaCompras = JSON.parse(localStorage.getItem("listaCompras")) || [];
+let listaCompras = carregarDoStorage("listaCompras");
 
 function renderListaCompras() {
     const container = document.getElementById('lista-compras');
@@ -775,4 +764,99 @@ async function partilharListaCompras() {
         ${listaHtml}
       </div>`;
     gerarEPartilharImagem(htmlFinal, 'lista-compras.png');
+}
+
+// =================================================================================
+// LÓGICA DO SEPARADOR SUGESTÕES DE JANTAR
+// =================================================================================
+const refeicoesDB = [
+    { id: 1, nome: "Massa à Bolonhesa", tags: ['massa', 'carne'], tempo: 'normal', kidFriendly: true, desc: "Um clássico que agrada a todos, especialmente aos mais novos. Perfeito para um jantar de família." },
+    { id: 2, nome: "Bifes de Frango Grelhados com Arroz e Salada", tags: ['frango', 'salada', 'arroz'], tempo: 'rapido', kidFriendly: true, desc: "Uma refeição leve, rápida e saudável. O frango grelhado é sempre uma aposta segura." },
+    { id: 3, nome: "Douradinhos no Forno com Arroz de Tomate", tags: ['peixe', 'arroz'], tempo: 'normal', kidFriendly: true, desc: "Os douradinhos são um favorito das crianças, e feitos no forno ficam mais saudáveis." },
+    { id: 4, nome: "Massa com Atum e Natas", tags: ['massa', 'peixe', 'atum'], tempo: 'rapido', kidFriendly: true, desc: "Incrivelmente rápido e cremoso. Uma solução perfeita para dias de pressa." },
+    { id: 5, nome: "Omelete de Queijo e Fiambre com Salada", tags: ['ovos', 'salada'], tempo: 'rapido', kidFriendly: true, desc: "Versátil e rapidíssima. Pode juntar os legumes que tiver no frigorífico." },
+    { id: 6, nome: "Rojões de Porco à Portuguesa", tags: ['carne', 'porco'], tempo: 'normal', kidFriendly: false, desc: "Um prato robusto e cheio de sabor, para um jantar com mais tempo e apetite." },
+    { id: 7, nome: "Salada Caesar com Frango Grelhado", tags: ['salada', 'frango'], tempo: 'rapido', kidFriendly: false, desc: "Uma salada completa que serve como refeição principal. Leve mas satisfatória." },
+    { id: 8, nome: "Strogonoff de Frango com Batata Palha", tags: ['frango', 'carne'], tempo: 'normal', kidFriendly: true, desc: "Um prato cremoso e reconfortante que é surpreendentemente fácil de fazer." },
+    { id: 9, nome: "Nuggets Caseiros com Esparguete", tags: ['frango', 'massa', 'carne'], tempo: 'rapido', kidFriendly: true, desc: "A combinação preferida da pequenada para um dia especial, como o dos trampolins!" },
+    { id: 10, nome: "Salmão Grelhado com Legumes Cozidos", tags: ['peixe', 'salada'], tempo: 'normal', kidFriendly: true, desc: "Uma opção muito saudável e saborosa para uma refeição equilibrada durante a semana." },
+    { id: 11, nome: "Bife com Batata Frita e Ovo Estrelado", tags: ['carne', 'batata_frita', 'ovos'], tempo: 'rapido', kidFriendly: true, desc: "O 'bitoque'. Um prato rápido, delicioso e um clássico que nunca falha." },
+    { id: 12, nome: "Risotto de Cogumelos", tags: ['arroz', 'cogumelos'], tempo: 'normal', kidFriendly: false, desc: "Um prato vegetariano, cremoso e sofisticado para uma noite mais calma." },
+    { id: 13, nome: "Esparguete com Camarão ao Alho", tags: ['massa', 'peixe'], tempo: 'rapido', kidFriendly: false, desc: "Rápido, aromático e com um toque mediterrânico. Ideal para um jantar a dois." },
+    { id: 14, nome: "Empadão de Carne com Puré de Batata", tags: ['carne', 'batata'], tempo: 'normal', kidFriendly: true, desc: "Comida de conforto no seu melhor. O empadão é sempre um sucesso com toda a família." }
+];
+let historicoSugestoes = carregarDoStorage("historicoSugestoes");
+
+function sugerirJantar(surpresa = false) {
+    const querRapida = document.getElementById('sugestao-rapida').checked;
+    const ingredientesSelecionados = surpresa ? [] : Array.from(document.querySelectorAll('input[name="ingrediente"]:checked')).map(cb => cb.value);
+
+    const seisDiasAtras = new Date();
+    seisDiasAtras.setDate(seisDiasAtras.getDate() - 6);
+    historicoSugestoes = historicoSugestoes.filter(h => new Date(h.timestamp) > seisDiasAtras);
+    const idsRecentes = historicoSugestoes.map(h => h.id);
+
+    let poolDisponivel = refeicoesDB.filter(r => !idsRecentes.includes(r.id));
+    if (poolDisponivel.length === 0) {
+        poolDisponivel = refeicoesDB;
+        historicoSugestoes = [];
+    }
+
+    let poolFinal = poolDisponivel;
+    if (querRapida) {
+        const refeicoesRapidas = poolFinal.filter(r => r.tempo === 'rapido');
+        if (refeicoesRapidas.length > 0) poolFinal = refeicoesRapidas;
+    }
+
+    if (ingredientesSelecionados.length > 0) {
+        const refeicoesComIngredientes = poolFinal.filter(r => 
+            ingredientesSelecionados.some(ing => r.tags.includes(ing))
+        );
+        if (refeicoesComIngredientes.length > 0) {
+            poolFinal = refeicoesComIngredientes;
+        } else {
+             alert("Não foram encontradas sugestões com esses critérios. Tente outras opções ou clique em 'Surpreenda-me!'.");
+             return;
+        }
+    }
+
+    if (poolFinal.length > 0) {
+        const sugestao = poolFinal[Math.floor(Math.random() * poolFinal.length)];
+        historicoSugestoes.push({ id: sugestao.id, timestamp: new Date() });
+        localStorage.setItem("historicoSugestoes", JSON.stringify(historicoSugestoes));
+        renderizarSugestao(sugestao);
+    } else {
+        alert("Não foi possível encontrar uma sugestão única com os seus filtros. Tente novamente!");
+    }
+}
+
+function renderizarSugestao(refeicao) {
+    const inputContainer = document.getElementById('sugestao-input-container');
+    const resultadoContainer = document.getElementById('sugestao-resultado-container');
+
+    resultadoContainer.innerHTML = `
+        <div class="card-header"><h2 class="card-title">A nossa sugestão para hoje é...</h2></div>
+        <div class="card-body">
+            <h3 class="card-title" style="font-size: 1.5rem; color: var(--primary);">${refeicao.nome}</h3>
+            <p style="margin-top: 1rem;">${refeicao.desc}</p>
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+                <p><strong>Tipo:</strong> ${refeicao.tags.join(', ')}</p>
+                <p><strong>Tempo estimado:</strong> ${refeicao.tempo === 'rapido' ? '⚡ Rápido' : 'Normal'}</p>
+                <p><strong>Ideal para crianças:</strong> ${refeicao.kidFriendly ? 'Sim 👍' : 'Talvez 🤔'}</p>
+            </div>
+        </div>
+        <div class="card-footer" style="justify-content: flex-end;">
+            <button onclick="mostrarEcradeInputSugestao()" class="btn btn-secondary">Sugerir Outra</button>
+        </div>
+    `;
+    inputContainer.style.display = 'none';
+    resultadoContainer.style.display = 'flex';
+    resultadoContainer.style.flexDirection = 'column';
+}
+
+function mostrarEcradeInputSugestao() {
+    document.getElementById('sugestao-input-container').style.display = 'block';
+    document.getElementById('sugestao-resultado-container').style.display = 'none';
+    document.querySelectorAll('input[name="ingrediente"]:checked').forEach(cb => cb.checked = false);
+    document.getElementById('sugestao-rapida').checked = false;
 }
