@@ -16,15 +16,11 @@ function carregarDoStorage(chave, valorDefault = []) {
 // Evento principal que arranca a aplicação DE FORMA SEGURA
 document.addEventListener('DOMContentLoaded', () => {
     try {
+        // Atribui todos os event listeners primeiro
         setupEventListeners();
         
-        // Inicia o primeiro separador
-        const primeiroBotao = document.querySelector('.tab-button');
-        if (primeiroBotao) {
-            openTab({ currentTarget: primeiroBotao }, 'despesas');
-        }
-
-        // Inicia as diferentes secções
+        // Inicia o estado visual da aplicação
+        document.querySelector('.tab-button').click();
         iniciarNovoEvento(false);
         renderListaCompras();
         renderizarHistorico('despesas');
@@ -34,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Agrupa a atribuição de todos os event listeners
+// Agrupa a atribuição de todos os event listeners para garantir que o DOM está pronto
 function setupEventListeners() {
     const modals = document.querySelectorAll('.modal');
     modals.forEach(modal => {
@@ -861,12 +857,10 @@ function renderizarSugestao(refeicao) {
             <h3 class="card-title" style="font-size: 1.5rem; color: var(--primary);">${refeicao.nome}</h3>
             <p style="margin-top: 1rem;">${refeicao.desc}</p>
         </div>
-        <div class="card-footer" style="justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+        <div class="card-footer" style="flex-wrap: wrap; justify-content: flex-end; gap: 0.75rem;">
             <button onclick="mostrarEcradeInputSugestao()" class="btn btn-secondary">Ajustar Filtros</button>
-            <div>
-                <a href="${refeicao.linkReceita}" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Ver Receita ↗️</a>
-                <button onclick="sugerirJantar(false, true)" class="btn btn-primary">Sugerir Outra 🔄</button>
-            </div>
+            <a href="${refeicao.linkReceita}" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Ver Receita ↗️</a>
+            <button onclick="sugerirJantar(false, true)" class="btn btn-primary">Sugerir Outra 🔄</button>
         </div>
     `;
     inputContainer.style.display = 'none';
