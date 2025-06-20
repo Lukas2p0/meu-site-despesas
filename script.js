@@ -2,61 +2,80 @@
 // INICIALIZAÇÃO E LÓGICA GERAL
 // =================================================================================
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Inicia o primeiro separador
-    document.querySelector('.tab-button').click();
+// Função segura para ler do localStorage, retorna um valor default em caso de erro
+function carregarDoStorage(chave, valorDefault = []) {
+    try {
+        const item = localStorage.getItem(chave);
+        return item ? JSON.parse(item) : valorDefault;
+    } catch (e) {
+        console.error(`Erro ao carregar '${chave}' do localStorage. A usar valor default. Erro:`, e);
+        return valorDefault;
+    }
+}
 
-    // Inicia as diferentes secções
-    iniciarNovoEvento(false); // Inicia Despesas sem pedir confirmação
-    renderListaCompras();
-    renderizarHistorico('despesas');
-    
-    // Lógica dos Modais
-    const modalHistorico = document.getElementById('modal-historico');
-    if(modalHistorico) {
-        const modalCloseBtnHistorico = modalHistorico.querySelector('.modal-close');
-        modalCloseBtnHistorico.onclick = () => { modalHistorico.style.display = 'none'; };
+// Evento principal que arranca a aplicação DE FORMA SEGURA
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        setupEventListeners();
+        
+        // Inicia o primeiro separador
+        const primeiroBotao = document.querySelector('.tab-button');
+        if (primeiroBotao) {
+            openTab({ currentTarget: primeiroBotao }, 'despesas');
+        }
+
+        // Inicia as diferentes secções
+        iniciarNovoEvento(false);
+        renderListaCompras();
+        renderizarHistorico('despesas');
+    } catch (error) {
+        console.error("Erro crítico na inicialização da aplicação:", error);
+        alert("Ocorreu um erro grave ao carregar a aplicação. Por favor, tente limpar os dados de navegação.");
     }
-    
-    const modalGrupos = document.getElementById('modal-grupos');
-    if(modalGrupos) {
-        const modalCloseBtnGrupos = modalGrupos.querySelector('.modal-close');
-        modalCloseBtnGrupos.onclick = fecharModalGrupos;
-    }
-    
-    const modalValores = document.getElementById('modal-valores');
-    if(modalValores) {
-        const modalCloseBtnValores = modalValores.querySelector('.modal-close');
-        modalCloseBtnValores.onclick = fecharModalValores;
-    }
+});
+
+// Agrupa a atribuição de todos os event listeners
+function setupEventListeners() {
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        const closeBtn = modal.querySelector('.modal-close');
+        if (closeBtn) {
+            closeBtn.onclick = () => { modal.style.display = 'none'; };
+        }
+    });
 
     window.onclick = (event) => {
-        if (event.target == modalHistorico) modalHistorico.style.display = 'none';
-        if (event.target == modalGrupos) fecharModalGrupos();
-        if (event.target == modalValores) fecharModalValores();
+        modals.forEach(modal => {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        });
     };
-});
+}
 
 function openTab(evt, tabName) {
   const tabcontent = document.getElementsByClassName("tab-content");
   for (let i = 0; i < tabcontent.length; i++) {
     tabcontent[i].style.display = "none";
-    tabcontent[i].classList.remove("active");
   }
   const tabbuttons = document.getElementsByClassName("tab-button");
   for (let i = 0; i < tabbuttons.length; i++) {
     tabbuttons[i].classList.remove("active");
   }
-  document.getElementById(tabName).style.display = "flex";
-  document.getElementById(tabName).classList.add("active");
-  evt.currentTarget.classList.add("active");
+  const tabAtiva = document.getElementById(tabName);
+  if (tabAtiva) {
+    tabAtiva.style.display = "flex";
+  }
+  if (evt && evt.currentTarget) {
+    evt.currentTarget.classList.add("active");
+  }
 }
 
 // =================================================================================
 // LÓGICA DO SEPARADOR DESPESAS E GRUPOS
 // =================================================================================
 let participantes = [];
-let historicoDespesas = JSON.parse(localStorage.getItem("historicoEventos")) || [];
+let historicoDespesas = carregarDoStorage("historicoEventos");
 let editandoIndex = null;
 let nomesSelecionadosParaAdicionar = [];
 
@@ -66,7 +85,7 @@ const listaPredefinidaDefault = [
     { nomes: ["Tiago Louro"] }, { nomes: ["Rui Cresovel", "Inês"] },
     { nomes: ["Vânia Silva"] }, { nomes: ["Rui Moutinho", "Sandra Moutinho"] }
 ];
-let gruposPredefinidos = JSON.parse(localStorage.getItem("gruposPredefinidos")) || listaPredefinidaDefault;
+let gruposPredefinidos = carregarDoStorage("gruposPredefinidos", listaPredefinidaDefault);
 
 function abrirModalGrupos() {
     nomesSelecionadosParaAdicionar = [];
@@ -74,13 +93,8 @@ function abrirModalGrupos() {
     document.getElementById('modal-grupos').style.display = 'block';
 }
 
-function fecharModalGrupos() {
-    document.getElementById('modal-grupos').style.display = 'none';
-}
-
-function fecharModalValores() {
-    document.getElementById('modal-valores').style.display = 'none';
-}
+function fecharModalGrupos() { document.getElementById('modal-grupos').style.display = 'none'; }
+function fecharModalValores() { document.getElementById('modal-valores').style.display = 'none'; }
 
 function renderizarGrupos() {
     const container = document.getElementById('lista-grupos');
@@ -92,22 +106,11 @@ function renderizarGrupos() {
     gruposPredefinidos.forEach((grupo, index) => {
         const grupoDiv = document.createElement('div');
         grupoDiv.className = 'grupo-item';
-        
         let nomesHtml = grupo.nomes.map(nome => {
             const isSelected = nomesSelecionadosParaAdicionar.includes(nome);
             return `<button class="btn btn-secondary ${isSelected ? 'active' : ''}" onclick="toggleSelecaoGrupo(this, '${nome.replace(/'/g, "\\'")}')">${nome}</button>`;
         }).join('');
-
-        grupoDiv.innerHTML = `
-            <div class="grupo-header">
-                <h3 class="card-title" style="font-size: 1rem;">${grupo.nomes.join(' e ')}</h3>
-                <div>
-                    <button class="btn btn-secondary" onclick="editarGrupo(${index})">✏️</button>
-                    <button class="btn btn-danger" onclick="eliminarGrupo(${index})">🗑️</button>
-                </div>
-            </div>
-            <div class="grupo-nomes">${nomesHtml}</div>
-        `;
+        grupoDiv.innerHTML = `<div class="grupo-header"><h3 class="card-title" style="font-size: 1rem;">${grupo.nomes.join(' e ')}</h3><div><button class="btn btn-secondary" onclick="editarGrupo(${index})">✏️</button><button class="btn btn-danger" onclick="eliminarGrupo(${index})">🗑️</button></div></div><div class="grupo-nomes">${nomesHtml}</div>`;
         container.appendChild(grupoDiv);
     });
 }
@@ -127,33 +130,26 @@ function processarAdicionarSelecionados() {
         alert("Nenhum participante selecionado.");
         return;
     }
-
     const valoresBody = document.getElementById('valores-body');
     valoresBody.innerHTML = '';
-
     nomesSelecionadosParaAdicionar.forEach(nome => {
-        const cleanNome = nome.replace(/\s/g, '');
+        const cleanNome = nome.replace(/[^a-zA-Z0-9]/g, '');
         const inputRow = document.createElement('div');
         inputRow.className = 'input-grid';
-        inputRow.innerHTML = `
-            <label for="valor-de-${cleanNome}">${nome}:</label>
-            <input type="number" id="valor-de-${cleanNome}" placeholder="Valor gasto (€)" />
-        `;
+        inputRow.innerHTML = `<label for="valor-de-${cleanNome}">${nome}:</label><input type="number" id="valor-de-${cleanNome}" placeholder="Valor gasto (€)" />`;
         valoresBody.appendChild(inputRow);
     });
-
     fecharModalGrupos();
     document.getElementById('modal-valores').style.display = 'block';
 }
 
 function guardarValoresBatch() {
     nomesSelecionadosParaAdicionar.forEach(nome => {
-        const cleanNome = nome.replace(/\s/g, '');
+        const cleanNome = nome.replace(/[^a-zA-Z0-9]/g, '');
         const valorInput = document.getElementById(`valor-de-${cleanNome}`);
         const valor = parseFloat(valorInput.value || '0');
         adicionarParticipante(nome, valor);
     });
-    
     fecharModalValores();
     atualizar();
 }
@@ -217,24 +213,26 @@ function iniciarNovoEvento(confirmar = true) {
   }
   participantes = [];
   editandoIndex = null;
-  document.getElementById('evento').value = '';
-  document.getElementById('data').valueAsDate = new Date();
+  const eventoInput = document.getElementById('evento');
+  const dataInput = document.getElementById('data');
+  if(eventoInput) eventoInput.value = '';
+  if(dataInput) dataInput.valueAsDate = new Date();
+  
   atualizar();
   if (confirmar) {
       window.scrollTo(0, 0);
-      document.getElementById('evento').focus();
+      if(eventoInput) eventoInput.focus();
   }
 }
 
-function carregarEventoParaEdicao(index, event) {
+function carregarEventoParaEdicao(indexReverso, event) {
   event.stopPropagation();
-  const historico = JSON.parse(localStorage.getItem("historicoEventos")) || [];
-  const i = historico.length - 1 - index;
+  const i = historicoDespesas.length - 1 - indexReverso;
   if (participantes.length > 0 && editandoIndex === null) {
     if (!confirm("Isto irá substituir o evento que está a criar. Deseja continuar?")) return;
   }
   openTab({currentTarget: document.querySelector('.tab-button[onclick*="despesas"]')}, 'despesas');
-  const ev = historico[i];
+  const ev = historicoDespesas[i];
   editandoIndex = i;
   document.getElementById('evento').value = ev.nomeEvento;
   document.getElementById('data').value = ev.data;
@@ -347,7 +345,6 @@ function atualizar() {
 // =================================================================================
 // LÓGICA DE PARTILHA DE IMAGEM (CENTRALIZADA)
 // =================================================================================
-
 async function gerarEPartilharImagem(htmlParaImagem, nomeFicheiro) {
     const containerPartilha = document.getElementById('imagem-a-partilhar');
     const conteudoPartilha = document.getElementById('conteudo-imagem');
@@ -358,15 +355,13 @@ async function gerarEPartilharImagem(htmlParaImagem, nomeFicheiro) {
     try {
         const canvas = await html2canvas(containerPartilha, { scale: 2, useCORS: true });
         canvas.toBlob(async (blob) => {
-            if (navigator.canShare && navigator.canShare({ files: [new File([blob], nomeFicheiro, { type: 'image/png' })] })) {
+            if (navigator.share && navigator.canShare({ files: [new File([blob], nomeFicheiro, { type: 'image/png' })] })) {
                 try {
                     await navigator.share({
                         files: [new File([blob], nomeFicheiro, { type: 'image/png' })]
                     });
                 } catch (err) {
-                    if (err.name !== 'AbortError') {
-                        console.error('Erro ao partilhar:', err);
-                    }
+                    if (err.name !== 'AbortError') console.error('Erro ao partilhar:', err);
                 }
             } else {
                 const link = document.createElement('a');
@@ -403,7 +398,7 @@ async function partilharReembolsos() {
 // =================================================================================
 // LÓGICA DO SEPARADOR REFEIÇÕES
 // =================================================================================
-let historicoRefeicoes = JSON.parse(localStorage.getItem("historicoRefeicoes")) || [];
+let historicoRefeicoes = carregarDoStorage("historicoRefeicoes");
 let ultimoCalculoRefeicao = null;
 
 const pesosEquivalentes = {
@@ -413,11 +408,9 @@ const pesosEquivalentes = {
 function calcularRefeicao() {
     const adultos = parseInt(document.getElementById('num-adultos').value) || 0;
     const criancas = parseInt(document.getElementById('num-criancas').value) || 0;
-    
     document.getElementById('ajuste-fino-container').style.display = 'none';
     document.getElementById('ajuste-mulheres').value = '';
     document.getElementById('ajuste-comiloes').value = '';
-
     const resultado = calcularQuantidades(adultos, criancas);
     renderizarResultadoRefeicao(resultado, adultos, criancas);
 }
@@ -425,18 +418,14 @@ function calcularRefeicao() {
 function reajustarCarnes() {
     const adultosBase = parseInt(document.getElementById('num-adultos').value) || 0;
     const criancas = parseInt(document.getElementById('num-criancas').value) || 0;
-    
     const numMulheres = parseInt(document.getElementById('ajuste-mulheres').value) || 0;
     const numComiloes = parseInt(document.getElementById('ajuste-comiloes').value) || 0;
-
     if (numMulheres + numComiloes > adultosBase) {
         alert("O número de mulheres e 'comilões' não pode exceder o número total de adultos.");
         return;
     }
-
     const numNormais = adultosBase - numMulheres - numComiloes;
     const adultosEquivalentes = (numNormais * 1) + (numMulheres * (2/3)) + (numComiloes * 1.5);
-    
     const resultado = calcularQuantidades(adultosBase, criancas, adultosEquivalentes);
     renderizarResultadoRefeicao(resultado, adultosBase, criancas);
 }
@@ -444,7 +433,6 @@ function reajustarCarnes() {
 function calcularQuantidades(adultos, criancas, adultosEquivalentesParaCarne = null) {
     const totalPessoas = adultos + criancas;
     const adultosParaCarne = adultosEquivalentesParaCarne !== null ? adultosEquivalentesParaCarne : adultos;
-
     const querCerveja = document.getElementById('check-cerveja').checked;
     const querVinho = document.getElementById('check-vinho').checked;
     const querSumosAdultos = document.getElementById('check-sumos-adultos').checked;
@@ -474,7 +462,6 @@ function calcularQuantidades(adultos, criancas, adultosEquivalentesParaCarne = n
     
     if (carnesSelecionadas.length > 0) {
         let apetiteTotalKg = (adultosParaCarne * 0.400) + (criancas * 0.200);
-        
         const querSalsichas = carnesSelecionadas.includes('Salsichas');
         let carnesParaBalancear = carnesSelecionadas.filter(c => c !== 'Salsichas');
         
@@ -581,7 +568,6 @@ async function partilharRefeicaoComoImagem() {
         alert("Não há resultados para partilhar.");
         return;
     }
-    
     let htmlResultados = '';
     const categorias = {
         aperitivos: '🧀 Aperitivos', bebidas: '🍻 Bebidas', carnes: '🥩 Carnes', acompanhamentos: '🥗 Acompanhamentos'
@@ -592,7 +578,6 @@ async function partilharRefeicaoComoImagem() {
             ultimoCalculoRefeicao.resultados[categoria].forEach(r => { htmlResultados += `<p><strong>${r.item}:</strong> ${r.qtd}</p>`; });
         }
     }
-
     const htmlFinal = `
       <div style="padding: 1rem;">
         <h2 style="text-align: center; color: var(--heading); margin-bottom: 0.5rem;">Lista para a Refeição</h2>
@@ -602,29 +587,25 @@ async function partilharRefeicaoComoImagem() {
         ${htmlResultados}
       </div>
     `;
-    
     gerarEPartilharImagem(htmlFinal, 'lista-refeicao.png');
 }
-
 
 // =================================================================================
 // LÓGICA DO SEPARADOR HISTÓRICO
 // =================================================================================
-
 function renderizarHistorico(tipo, targetButton) {
     if(targetButton) {
       document.querySelectorAll('.tab-button-local').forEach(btn => btn.classList.remove('active'));
       targetButton.classList.add('active');
     }
-
     const container = document.getElementById('historico-container');
     container.innerHTML = '';
-    
     if (tipo === 'despesas') {
+        historicoDespesas = carregarDoStorage("historicoEventos");
         if (historicoDespesas.length > 0) {
             let html = '<div class="table-wrapper"><table><thead><tr><th>Evento</th><th>Data</th><th>Total</th><th class="actions">Ações</th></tr></thead><tbody>';
             historicoDespesas.slice().reverse().forEach((ev, i_rev) => {
-              const i = historicoDespesas.length - 1 - i_rev;
+              const i = i_rev;
               html += `<tr><td style="cursor:pointer;" onclick="verDetalhesDespesa(${i})"><strong class="clickable-row">${ev.nomeEvento}</strong></td><td>${ev.data}</td><td>${ev.total.toFixed(2)} €</td><td class="actions"><button onclick="carregarEventoParaEdicao(${i}, event)" class="btn btn-secondary" title="Editar">✏️</button><button onclick="eliminarHistorico('despesas', ${i}, event)" class="btn btn-danger" title="Eliminar">🗑️</button></td></tr>`;
             });
             container.innerHTML = html + '</tbody></table></div>';
@@ -632,10 +613,11 @@ function renderizarHistorico(tipo, targetButton) {
             container.innerHTML = '<div class="card-body"><p>Nenhum evento de despesas guardado.</p></div>';
         }
     } else if (tipo === 'refeicoes') {
+        historicoRefeicoes = carregarDoStorage("historicoRefeicoes");
         if (historicoRefeicoes.length > 0) {
             let html = '<div class="table-wrapper"><table><thead><tr><th>Refeição</th><th>Data</th><th>Pessoas</th><th class="actions">Ações</th></tr></thead><tbody>';
             historicoRefeicoes.slice().reverse().forEach((ev, i_rev) => {
-                const i = historicoRefeicoes.length - 1 - i_rev;
+                const i = i_rev;
                 html += `<tr><td style="cursor:pointer;" onclick="verDetalhesRefeicao(${i})"><strong class="clickable-row">${ev.nome}</strong></td><td>${ev.data}</td><td>${ev.adultos}A, ${ev.criancas}C</td><td class="actions"><button onclick="eliminarHistorico('refeicoes', ${i}, event)" class="btn btn-danger" title="Eliminar">🗑️</button></td></tr>`;
             });
             container.innerHTML = html + '</tbody></table></div>';
@@ -645,8 +627,8 @@ function renderizarHistorico(tipo, targetButton) {
     }
 }
 
-function verDetalhesDespesa(index) {
-  const ev = historicoDespesas[historicoDespesas.length - 1 - index];
+function verDetalhesDespesa(indexReverso) {
+  const ev = historicoDespesas.slice().reverse()[indexReverso];
   const modal = document.getElementById('modal-historico');
   const modalTitle = document.getElementById('modal-title');
   const modalBody = document.getElementById('modal-body');
@@ -667,12 +649,11 @@ function verDetalhesDespesa(index) {
   modal.style.display = 'block';
 }
 
-function verDetalhesRefeicao(index) {
-    const ev = historicoRefeicoes[historicoRefeicoes.length - 1 - index];
+function verDetalhesRefeicao(indexReverso) {
+    const ev = historicoRefeicoes.slice().reverse()[indexReverso];
     const modal = document.getElementById('modal-historico');
     const modalTitle = document.getElementById('modal-title');
     const modalBody = document.getElementById('modal-body');
-    
     let htmlResultados = '';
     const categorias = {
         aperitivos: '🧀 Aperitivos', bebidas: '🍻 Bebidas', carnes: '🥩 Carnes', acompanhamentos: '🥗 Acompanhamentos'
@@ -685,7 +666,6 @@ function verDetalhesRefeicao(index) {
             });
         }
     }
-
     modalTitle.textContent = ev.nome;
     modalBody.innerHTML = `
         <div class="card"><div class="card-header"><h2 class="card-title">Detalhes do Cálculo</h2></div><div class="card-body"><p><strong>Data:</strong> ${ev.data}</p><p><strong>Pessoas:</strong> ${ev.adultos} Adultos, ${ev.criancas} Crianças</p></div></div>
@@ -713,7 +693,7 @@ function eliminarHistorico(tipo, indexReverso, event) {
 // LÓGICA DO SEPARADOR COMPRAS
 // =================================================================================
 
-let listaCompras = JSON.parse(localStorage.getItem("listaCompras")) || [];
+let listaCompras = carregarDoStorage("listaCompras");
 
 function renderListaCompras() {
     const container = document.getElementById('lista-compras');
@@ -729,14 +709,12 @@ function renderListaCompras() {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'shopping-item' + (item.checked ? ' checked' : '');
         itemDiv.onclick = () => toggleItemCompra(index);
-        
         const itemSpan = document.createElement('span');
         itemSpan.textContent = item.text;
         const deleteButton = document.createElement('button');
         deleteButton.className = 'btn btn-danger';
         deleteButton.innerHTML = '🗑️';
         deleteButton.onclick = (e) => { e.stopPropagation(); eliminarItemCompra(index); };
-        
         itemDiv.appendChild(itemSpan);
         itemDiv.appendChild(deleteButton);
         container.appendChild(itemDiv);
@@ -795,4 +773,108 @@ async function partilharListaCompras() {
         ${listaHtml}
       </div>`;
     gerarEPartilharImagem(htmlFinal, 'lista-compras.png');
+}
+
+// =================================================================================
+// LÓGICA DO SEPARADOR SUGESTÕES DE JANTAR
+// =================================================================================
+const refeicoesDB = [
+    { id: 1, nome: "Massa à Bolonhesa", tags: ['massa', 'carne'], tempo: 'normal', kidFriendly: true, desc: "Um clássico que agrada a todos. Perfeito para um jantar de família.", linkReceita: "https://www.pingodoce.pt/receitas/esparguete-a-bolonhesa-rapido/" },
+    { id: 2, nome: "Bifes de Frango Grelhados com Arroz e Salada", tags: ['frango', 'salada', 'arroz', 'rapido'], tempo: 'rapido', kidFriendly: true, desc: "Uma refeição leve, rápida e saudável. O frango grelhado é sempre uma aposta segura.", linkReceita: "https://www.saborintenso.com/f23/bifes-frango-grelhados-arroz-cenoura-3972/" },
+    { id: 3, nome: "Douradinhos no Forno com Arroz de Tomate", tags: ['peixe', 'arroz'], tempo: 'normal', kidFriendly: true, desc: "Os douradinhos são um favorito das crianças, e feitos no forno ficam mais saudáveis.", linkReceita: "https://www.teleculinaria.pt/receitas/peixe/douradinhos-com-arroz-de-tomate-e-coentros/" },
+    { id: 4, nome: "Massa com Atum e Cogumelos", tags: ['massa', 'peixe', 'atum', 'cogumelos', 'rapido'], tempo: 'rapido', kidFriendly: true, desc: "Incrivelmente rápido e cremoso. Uma solução perfeita para dias de pressa.", linkReceita: "https://www.pingodoce.pt/receitas/massa-salteada-com-atum-e-cogumelos/" },
+    { id: 5, nome: "Omelete de Queijo e Fiambre com Salada", tags: ['ovos', 'salada', 'rapido'], tempo: 'rapido', kidFriendly: true, desc: "Versátil e rapidíssima. Pode juntar os legumes que tiver no frigorífico.", linkReceita: "https://www.pingodoce.pt/receitas/omeleta-mista-com-salada/" },
+    { id: 6, nome: "Rojões de Porco à Portuguesa", tags: ['carne', 'porco'], tempo: 'normal', kidFriendly: false, desc: "Um prato robusto e cheio de sabor, para um jantar com mais tempo e apetite.", linkReceita: "https://www.saborintenso.com/f18/rojoes-moda-minho-48/" },
+    { id: 7, nome: "Salada Caesar com Frango", tags: ['salada', 'frango', 'rapido'], tempo: 'rapido', kidFriendly: false, desc: "Uma salada completa que serve como refeição principal. Leve mas satisfatória.", linkReceita: "https://www.continente.pt/receitas/salada-caesar-com-frango/" },
+    { id: 8, nome: "Strogonoff de Frango", tags: ['frango', 'carne', 'cogumelos'], tempo: 'normal', kidFriendly: true, desc: "Um prato cremoso e reconfortante que é surpreendentemente fácil de fazer.", linkReceita: "https://www.teleculinaria.pt/receitas/aves/strogonoff-de-frango-simples/" },
+    { id: 9, nome: "Nuggets Caseiros com Esparguete", tags: ['frango', 'massa', 'carne', 'rapido'], tempo: 'rapido', kidFriendly: true, desc: "A combinação preferida da pequenada para um dia especial, como o dos trampolins!", linkReceita: "https://www.continente.pt/receitas/nuggets-de-frango-com-esparguete/" },
+    { id: 10, nome: "Salmão Grelhado com Legumes", tags: ['peixe', 'salada'], tempo: 'normal', kidFriendly: true, desc: "Uma opção muito saudável e saborosa para uma refeição equilibrada.", linkReceita: "https://www.pingodoce.pt/receitas/salmao-grelhado-com-batata-doce-e-brocolos/" },
+    { id: 11, nome: "Bitoque com Batata Frita e Ovo", tags: ['carne', 'batata_frita', 'ovos', 'rapido'], tempo: 'rapido', kidFriendly: true, desc: "O 'bitoque'. Um prato rápido, delicioso e um clássico que nunca falha.", linkReceita: "https://www.saborintenso.com/f18/bitoque-vaca-340/" },
+    { id: 12, nome: "Risotto de Cogumelos", tags: ['arroz', 'cogumelos'], tempo: 'normal', kidFriendly: false, desc: "Um prato vegetariano, cremoso e sofisticado para uma noite mais calma.", linkReceita: "https://www.pingodoce.pt/receitas/risotto-de-cogumelos-com-tomilho/" },
+    { id: 13, nome: "Ovos Rotos com Chouriço", tags: ['ovos', 'carne', 'batata_frita', 'rapido'], tempo: 'rapido', kidFriendly: false, desc: "Uma tapa espanhola que funciona perfeitamente como um jantar rápido e delicioso.", linkReceita: "https://www.teleculinaria.pt/receitas/entradas/ovos-rotos-com-chouricao/" },
+    { id: 14, nome: "Empadão de Carne com Arroz", tags: ['carne', 'arroz'], tempo: 'normal', kidFriendly: true, desc: "Comida de conforto no seu melhor. O empadão é sempre um sucesso com toda a família.", linkReceita: "https://www.saborintenso.com/f18/empadao-carne-arroz-4670/" }
+];
+let historicoSugestoes = carregarDoStorage("historicoSugestoes");
+let ultimosFiltrosSugestao = null;
+
+function sugerirJantar(surpresa = false, reRolagem = false) {
+    let querRapida, paraCriancas, ingredientesSelecionados;
+
+    if (reRolagem && ultimosFiltrosSugestao) {
+        querRapida = ultimosFiltrosSugestao.rapida;
+        paraCriancas = ultimosFiltrosSugestao.crianca;
+        ingredientesSelecionados = ultimosFiltrosSugestao.ingredientes;
+    } else {
+        querRapida = document.getElementById('sugestao-rapida').checked;
+        paraCriancas = document.getElementById('sugestao-crianca').checked;
+        ingredientesSelecionados = surpresa ? [] : Array.from(document.querySelectorAll('input[name="ingrediente"]:checked')).map(cb => cb.value);
+        ultimosFiltrosSugestao = { rapida: querRapida, crianca: paraCriancas, ingredientes: ingredientesSelecionados };
+    }
+
+    const seisDiasAtras = new Date();
+    seisDiasAtras.setDate(seisDiasAtras.getDate() - 6);
+    historicoSugestoes = historicoSugestoes.filter(h => new Date(h.timestamp) > seisDiasAtras);
+    const idsRecentes = historicoSugestoes.map(h => h.id);
+
+    let poolDisponivel = refeicoesDB.filter(r => !idsRecentes.includes(r.id));
+    if (poolDisponivel.length === 0) { 
+        poolDisponivel = refeicoesDB;
+        historicoSugestoes = [];
+    }
+    
+    let poolFinal = [...poolDisponivel];
+    if (paraCriancas) {
+        poolFinal = poolFinal.filter(r => r.kidFriendly === true);
+    }
+    if (querRapida) {
+        poolFinal = poolFinal.filter(r => r.tempo === 'rapido');
+    }
+    if (ingredientesSelecionados.length > 0) {
+        const refeicoesComIngredientes = poolFinal.filter(r => 
+            ingredientesSelecionados.some(ing => r.tags.includes(ing))
+        );
+        if (refeicoesComIngredientes.length > 0) {
+            poolFinal = refeicoesComIngredientes;
+        } else {
+             alert("Não foram encontradas sugestões com essa combinação de filtros. Tente outras opções.");
+             return;
+        }
+    }
+
+    if (poolFinal.length > 0) {
+        const sugestao = poolFinal[Math.floor(Math.random() * poolFinal.length)];
+        historicoSugestoes.push({ id: sugestao.id, timestamp: new Date() });
+        localStorage.setItem("historicoSugestoes", JSON.stringify(historicoSugestoes));
+        renderizarSugestao(sugestao);
+    } else {
+        alert("Não foi possível encontrar uma sugestão única com os seus filtros. Tente novamente!");
+    }
+}
+
+function renderizarSugestao(refeicao) {
+    const inputContainer = document.getElementById('sugestao-input-container');
+    const resultadoContainer = document.getElementById('sugestao-resultado-container');
+
+    resultadoContainer.innerHTML = `
+        <div class="card-header"><h2 class="card-title">A nossa sugestão para hoje é...</h2></div>
+        <div class="card-body">
+            <h3 class="card-title" style="font-size: 1.5rem; color: var(--primary);">${refeicao.nome}</h3>
+            <p style="margin-top: 1rem;">${refeicao.desc}</p>
+        </div>
+        <div class="card-footer" style="justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+            <button onclick="mostrarEcradeInputSugestao()" class="btn btn-secondary">Ajustar Filtros</button>
+            <div>
+                <a href="${refeicao.linkReceita}" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Ver Receita ↗️</a>
+                <button onclick="sugerirJantar(false, true)" class="btn btn-primary">Sugerir Outra 🔄</button>
+            </div>
+        </div>
+    `;
+    inputContainer.style.display = 'none';
+    resultadoContainer.style.display = 'flex';
+    resultadoContainer.style.flexDirection = 'column';
+}
+
+function mostrarEcradeInputSugestao() {
+    document.getElementById('sugestao-input-container').style.display = 'block';
+    document.getElementById('sugestao-resultado-container').style.display = 'none';
 }

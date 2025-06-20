@@ -4,13 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <title>Gestor de Eventos</title>
+    <title>Utilitários do Faria</title>
     
     <link rel="manifest" href="manifest.json">
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Eventos JF">
+    <meta name="apple-mobile-web-app-title" content="Utilitários do Faria">
     <meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
 
@@ -30,13 +30,14 @@
   <body>
     <div class="container">
       <header class="main-header">
-        <h1>Gestor de Eventos</h1>
+        <h1>Utilitários do Faria</h1>
         <p class="subtitle">Calcule despesas, planeie refeições e crie listas de compras.</p>
       </header>
 
       <div class="tabs">
         <button class="tab-button active" onclick="openTab(event, 'despesas')">💶 Despesas</button>
         <button class="tab-button" onclick="openTab(event, 'refeicoes')">🥩 Refeições</button>
+        <button class="tab-button" onclick="openTab(event, 'sugestoes')">💡 Sugestões</button>
         <button class="tab-button" onclick="openTab(event, 'compras')">🛒 Compras</button>
         <button class="tab-button" onclick="openTab(event, 'historico')">📋 Histórico</button>
       </div>
@@ -137,6 +138,38 @@
             </div>
           </div>
         </div>
+        
+        <div id="sugestoes" class="tab-content">
+          <div class="card">
+            <div id="sugestao-input-container">
+                <div class="card-header"><h2 class="card-title">O que apetece para o jantar?</h2></div>
+                <div class="card-body">
+                    <p class="subtitle" style="text-align:left; margin-bottom:1.5rem;">Selecione alguns ingredientes que tem em casa ou deixe em branco e clique em "Surpreenda-me!".</p>
+                    <div class="selection-grid">
+                        <label class="checkbox-label"><input type="checkbox" name="ingrediente" value="massa"> Massa</label>
+                        <label class="checkbox-label"><input type="checkbox" name="ingrediente" value="carne"> Carne</label>
+                        <label class="checkbox-label"><input type="checkbox" name="ingrediente" value="frango"> Frango</label>
+                        <label class="checkbox-label"><input type="checkbox" name="ingrediente" value="peixe"> Peixe</label>
+                        <label class="checkbox-label"><input type="checkbox" name="ingrediente" value="arroz"> Arroz</label>
+                        <label class="checkbox-label"><input type="checkbox" name="ingrediente" value="batata_frita"> Batata Frita</label>
+                        <label class="checkbox-label"><input type="checkbox" name="ingrediente" value="ovos"> Ovos</label>
+                        <label class="checkbox-label"><input type="checkbox" name="ingrediente" value="cogumelos"> Cogumelos</label>
+                        <label class="checkbox-label"><input type="checkbox" name="ingrediente" value="salada"> Salada</label>
+                    </div>
+                    <div class="selection-grid" style="margin-top: 1.5rem;">
+                        <label class="checkbox-label"><input type="checkbox" id="sugestao-rapida"> Tenho pouco tempo</label>
+                        <label class="checkbox-label"><input type="checkbox" id="sugestao-crianca" checked> Apenas para crianças</label>
+                    </div>
+                </div>
+                <div class="card-footer" style="justify-content: space-between;">
+                    <button onclick="sugerirJantar(true)" class="btn btn-secondary">Surpreenda-me!</button>
+                    <button onclick="sugerirJantar(false)" class="btn btn-primary">Sugerir Jantar</button>
+                </div>
+            </div>
+            <div id="sugestao-resultado-container" style="display: none;">
+            </div>
+          </div>
+        </div>
 
         <div id="compras" class="tab-content">
            <div class="card">
@@ -179,7 +212,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="card-title">Adicionar de Grupos</h2>
-                <span class="modal-close" onclick="fecharModalGrupos()">&times;</span>
+                <span class="modal-close">&times;</span>
             </div>
             <div id="lista-grupos" class="modal-body"></div>
             <div class="modal-footer" style="flex-direction: column; align-items: stretch;">
@@ -200,7 +233,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="card-title">Inserir Gastos</h2>
-                <span class="modal-close" onclick="fecharModalValores()">&times;</span>
+                <span class="modal-close">&times;</span>
             </div>
             <div id="valores-body" class="modal-body"></div>
             <div class="modal-footer">
@@ -209,7 +242,7 @@
         </div>
     </div>
 
-    <div id="imagem-a-partilhar" style="display: none; position: absolute; left: -9999px; padding: 1rem; background-color: var(--card-bg); width: 450px;"><div id="conteudo-imagem"></div><div class="watermark" style="text-align: center; font-size: 0.8rem; color: var(--slate-400); margin-top: 1rem;">Criado por João Faria</div></div>
+    <div id="imagem-a-partilhar" style="display: none; position: absolute; left: -9999px; padding: 1rem; background-color: var(--card-bg); width: 450px;"><div id="conteudo-imagem"></div><div class="watermark" style="text-align: center; font-size: 0.8rem; color: var(--slate-400); margin-top: 1rem;">Criado com Utilitários do Faria</div></div>
     
   </body>
 </html>
