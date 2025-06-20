@@ -13,13 +13,18 @@ function carregarDoStorage(chave, valorDefault = []) {
     }
 }
 
-// Evento principal que arranca a aplicação
+// Evento principal que arranca a aplicação DE FORMA SEGURA
 document.addEventListener('DOMContentLoaded', () => {
     try {
         setupEventListeners();
         
-        openTab({ currentTarget: document.querySelector('.tab-button') }, 'despesas');
+        // Inicia o primeiro separador
+        const primeiroBotao = document.querySelector('.tab-button');
+        if (primeiroBotao) {
+            openTab({ currentTarget: primeiroBotao }, 'despesas');
+        }
 
+        // Inicia as diferentes secções
         iniciarNovoEvento(false);
         renderListaCompras();
         renderizarHistorico('despesas');
@@ -57,8 +62,13 @@ function openTab(evt, tabName) {
   for (let i = 0; i < tabbuttons.length; i++) {
     tabbuttons[i].classList.remove("active");
   }
-  document.getElementById(tabName).style.display = "flex";
-  evt.currentTarget.classList.add("active");
+  const tabAtiva = document.getElementById(tabName);
+  if (tabAtiva) {
+    tabAtiva.style.display = "flex";
+  }
+  if (evt && evt.currentTarget) {
+    evt.currentTarget.classList.add("active");
+  }
 }
 
 // =================================================================================
@@ -203,12 +213,15 @@ function iniciarNovoEvento(confirmar = true) {
   }
   participantes = [];
   editandoIndex = null;
-  document.getElementById('evento').value = '';
-  document.getElementById('data').valueAsDate = new Date();
+  const eventoInput = document.getElementById('evento');
+  const dataInput = document.getElementById('data');
+  if(eventoInput) eventoInput.value = '';
+  if(dataInput) dataInput.valueAsDate = new Date();
+  
   atualizar();
   if (confirmar) {
       window.scrollTo(0, 0);
-      document.getElementById('evento').focus();
+      if(eventoInput) eventoInput.focus();
   }
 }
 
@@ -555,7 +568,6 @@ async function partilharRefeicaoComoImagem() {
         alert("Não há resultados para partilhar.");
         return;
     }
-    
     let htmlResultados = '';
     const categorias = {
         aperitivos: '🧀 Aperitivos', bebidas: '🍻 Bebidas', carnes: '🥩 Carnes', acompanhamentos: '🥗 Acompanhamentos'
@@ -566,7 +578,6 @@ async function partilharRefeicaoComoImagem() {
             ultimoCalculoRefeicao.resultados[categoria].forEach(r => { htmlResultados += `<p><strong>${r.item}:</strong> ${r.qtd}</p>`; });
         }
     }
-
     const htmlFinal = `
       <div style="padding: 1rem;">
         <h2 style="text-align: center; color: var(--heading); margin-bottom: 0.5rem;">Lista para a Refeição</h2>
@@ -576,10 +587,8 @@ async function partilharRefeicaoComoImagem() {
         ${htmlResultados}
       </div>
     `;
-    
     gerarEPartilharImagem(htmlFinal, 'lista-refeicao.png');
 }
-
 
 // =================================================================================
 // LÓGICA DO SEPARADOR HISTÓRICO
@@ -667,17 +676,15 @@ function verDetalhesRefeicao(indexReverso) {
 function eliminarHistorico(tipo, indexReverso, event) {
   event.stopPropagation();
   if (confirm("Tem a certeza que deseja eliminar este item do histórico?")) {
-    let historico, chaveStorage;
     if (tipo === 'despesas') {
-      historico = historicoDespesas;
-      chaveStorage = 'historicoEventos';
+      const indexOriginal = historicoDespesas.length - 1 - indexReverso;
+      historicoDespesas.splice(indexOriginal, 1);
+      localStorage.setItem("historicoEventos", JSON.stringify(historicoDespesas));
     } else {
-      historico = historicoRefeicoes;
-      chaveStorage = 'historicoRefeicoes';
+      const indexOriginal = historicoRefeicoes.length - 1 - indexReverso;
+      historicoRefeicoes.splice(indexOriginal, 1);
+      localStorage.setItem("historicoRefeicoes", JSON.stringify(historicoRefeicoes));
     }
-    const indexOriginal = historico.length - 1 - indexReverso;
-    historico.splice(indexOriginal, 1);
-    localStorage.setItem(chaveStorage, JSON.stringify(historico));
     renderizarHistorico(tipo);
   }
 }
@@ -858,7 +865,7 @@ function renderizarSugestao(refeicao) {
             <button onclick="mostrarEcradeInputSugestao()" class="btn btn-secondary">Ajustar Filtros</button>
             <div>
                 <a href="${refeicao.linkReceita}" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Ver Receita ↗️</a>
-                <button onclick="sugerirJantar(ultimosFiltrosSugestao.ingredientes.length === 0, true)" class="btn btn-primary">Sugerir Outra 🔄</button>
+                <button onclick="sugerirJantar(false, true)" class="btn btn-primary">Sugerir Outra 🔄</button>
             </div>
         </div>
     `;
@@ -871,5 +878,3 @@ function mostrarEcradeInputSugestao() {
     document.getElementById('sugestao-input-container').style.display = 'block';
     document.getElementById('sugestao-resultado-container').style.display = 'none';
 }
-
-// ... (Resto das funções que não foram alteradas)
