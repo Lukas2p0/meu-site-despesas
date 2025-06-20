@@ -1,7 +1,7 @@
 "use strict";
 
 // =================================================================================
-// FUNÇÕES AUXILIARES E GLOBAIS
+// 1. FUNÇÕES AUXILIARES E GLOBAIS (Definidas primeiro para estarem sempre disponíveis)
 // =================================================================================
 
 function carregarDoStorage(chave, valorDefault = []) {
@@ -9,7 +9,7 @@ function carregarDoStorage(chave, valorDefault = []) {
         const item = localStorage.getItem(chave);
         return item ? JSON.parse(item) : valorDefault;
     } catch (e) {
-        console.error(`Erro ao carregar '${chave}' do localStorage. A usar valor default.`, e);
+        console.error(`Erro ao carregar '${chave}' do localStorage:`, e);
         return valorDefault;
     }
 }
@@ -62,7 +62,7 @@ function openTab(evt, tabName) {
 }
 
 // =================================================================================
-// VARIÁVEIS DE ESTADO GLOBAIS
+// 2. VARIÁVEIS DE ESTADO GLOBAIS (Carregadas com a função auxiliar)
 // =================================================================================
 
 let participantes = [];
@@ -99,81 +99,16 @@ const refeicoesDB = [
     { id: 14, nome: "Empadão de Carne com Arroz", tags: ['carne', 'arroz'], tempo: 'normal', kidFriendly: true, light: false, desc: "Comida de conforto no seu melhor. O empadão é sempre um sucesso com toda a família.", linkReceita: "https://www.saborintenso.com/f18/empadao-carne-arroz-4670/" }
 ];
 
-
 // =================================================================================
-// INICIALIZAÇÃO DA PÁGINA E EVENT LISTENERS
-// =================================================================================
-
-document.addEventListener('DOMContentLoaded', () => {
-    try {
-        // Atribui todos os event listeners primeiro
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(modal => {
-            const closeBtn = modal.querySelector('.modal-close');
-            if (closeBtn) {
-                closeBtn.onclick = () => { modal.style.display = 'none'; };
-            }
-        });
-        window.onclick = (event) => {
-            modals.forEach(modal => {
-                if (event.target == modal) {
-                    modal.style.display = 'none';
-                }
-            });
-        };
-        
-        // Inicia o estado visual da aplicação
-        const primeiroBotao = document.querySelector('.tab-button');
-        if (primeiroBotao) {
-            openTab({ currentTarget: primeiroBotao }, 'despesas');
-        }
-        
-        // Carrega os dados e renderiza as vistas iniciais
-        iniciarNovoEvento(false);
-        renderListaCompras();
-        renderizarHistorico('despesas');
-
-    } catch (error) {
-        console.error("Erro crítico na inicialização da aplicação:", error);
-        alert("Ocorreu um erro grave ao carregar a aplicação. Por favor, tente limpar os dados de navegação.");
-    }
-});
-
-// ... (Todo o resto do código da aplicação vem aqui)
-// (Este é o script completo. O resto das funções está abaixo, na ordem correta)
-
-// =================================================================================
-// LÓGICA DOS SEPARADORES (TABS)
+// LÓGICA DE CADA SEPARADOR (DEFINIÇÃO DE TODAS AS FUNÇÕES)
 // =================================================================================
 
-function openTab(evt, tabName) {
-  const tabcontent = document.getElementsByClassName("tab-content");
-  for (let i = 0; i < tabcontent.length; i++) {
-    tabcontent[i].style.display = "none";
-  }
-  const tabbuttons = document.getElementsByClassName("tab-button");
-  for (let i = 0; i < tabbuttons.length; i++) {
-    tabbuttons[i].classList.remove("active");
-  }
-  const tabAtiva = document.getElementById(tabName);
-  if (tabAtiva) {
-    tabAtiva.style.display = "flex";
-  }
-  if (evt && evt.currentTarget) {
-    evt.currentTarget.classList.add("active");
-  }
-}
-
-// =================================================================================
-// LÓGICA DO SEPARADOR DESPESAS E GRUPOS
-// =================================================================================
-
+// --- LÓGICA DO SEPARADOR DESPESAS E GRUPOS ---
 function abrirModalGrupos() {
     nomesSelecionadosParaAdicionar = [];
     renderizarGrupos();
     document.getElementById('modal-grupos').style.display = 'block';
 }
-
 function fecharModalGrupos() { document.getElementById('modal-grupos').style.display = 'none'; }
 function fecharModalValores() { document.getElementById('modal-valores').style.display = 'none'; }
 
@@ -423,7 +358,6 @@ function atualizar() {
   document.getElementById('reembolsos').innerHTML = htmlReembolsos;
 }
 
-
 async function partilharReembolsos() {
     const transacoes = calcularTransacoes();
     if (transacoes.length === 0) {
@@ -443,9 +377,6 @@ async function partilharReembolsos() {
 // =================================================================================
 // LÓGICA DO SEPARADOR REFEIÇÕES
 // =================================================================================
-let historicoRefeicoes = carregarDoStorage("historicoRefeicoes");
-let ultimoCalculoRefeicao = null;
-
 function calcularRefeicao() {
     const adultos = parseInt(document.getElementById('num-adultos').value) || 0;
     const criancas = parseInt(document.getElementById('num-criancas').value) || 0;
@@ -822,7 +753,6 @@ async function partilharListaCompras() {
 // =================================================================================
 // LÓGICA DO SEPARADOR SUGESTÕES DE JANTAR
 // =================================================================================
-
 function sugerirJantar(surpresa = false, reRolagem = false) {
     let querRapida, paraCriancas, querLight, ingredientesSelecionados;
 
