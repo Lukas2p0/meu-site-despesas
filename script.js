@@ -2,7 +2,7 @@
 // INICIALIZAÇÃO E LÓGICA GERAL
 // =================================================================================
 
-// Função segura para ler do localStorage
+// Função segura para ler do localStorage, retorna um valor default em caso de erro
 function carregarDoStorage(chave, valorDefault = []) {
     try {
         const item = localStorage.getItem(chave);
@@ -13,29 +13,24 @@ function carregarDoStorage(chave, valorDefault = []) {
     }
 }
 
+// Evento principal que arranca a aplicação
 document.addEventListener('DOMContentLoaded', () => {
-    // Inicia as diferentes secções
-    iniciarNovoEvento(false);
-    renderListaCompras();
-    renderizarHistorico('despesas');
-    
-    // Atribui os listeners de eventos DEPOIS de tudo estar pronto
-    setupEventListeners();
+    try {
+        setupEventListeners();
+        
+        openTab({ currentTarget: document.querySelector('.tab-button') }, 'despesas');
+
+        iniciarNovoEvento(false);
+        renderListaCompras();
+        renderizarHistorico('despesas');
+    } catch (error) {
+        console.error("Erro crítico na inicialização da aplicação:", error);
+        alert("Ocorreu um erro grave ao carregar a aplicação. Por favor, tente limpar os dados de navegação.");
+    }
 });
 
+// Agrupa a atribuição de todos os event listeners
 function setupEventListeners() {
-    // Listener para os separadores principais
-    const tabButtons = document.querySelectorAll('.tab-button');
-    tabButtons.forEach(button => {
-        const tabName = button.getAttribute('onclick').match(/'([^']+)'/)[1];
-        button.onclick = (event) => openTab(event, tabName);
-    });
-    // Inicia o primeiro separador
-    if(tabButtons.length > 0) {
-       tabButtons[0].click();
-    }
-    
-    // Listeners dos Modais
     const modals = document.querySelectorAll('.modal');
     modals.forEach(modal => {
         const closeBtn = modal.querySelector('.modal-close');
@@ -52,7 +47,6 @@ function setupEventListeners() {
         });
     };
 }
-
 
 function openTab(evt, tabName) {
   const tabcontent = document.getElementsByClassName("tab-content");
@@ -586,6 +580,7 @@ async function partilharRefeicaoComoImagem() {
     gerarEPartilharImagem(htmlFinal, 'lista-refeicao.png');
 }
 
+
 // =================================================================================
 // LÓGICA DO SEPARADOR HISTÓRICO
 // =================================================================================
@@ -672,15 +667,17 @@ function verDetalhesRefeicao(indexReverso) {
 function eliminarHistorico(tipo, indexReverso, event) {
   event.stopPropagation();
   if (confirm("Tem a certeza que deseja eliminar este item do histórico?")) {
+    let historico, chaveStorage;
     if (tipo === 'despesas') {
-      const indexOriginal = historicoDespesas.length - 1 - indexReverso;
-      historicoDespesas.splice(indexOriginal, 1);
-      localStorage.setItem("historicoEventos", JSON.stringify(historicoDespesas));
+      historico = historicoDespesas;
+      chaveStorage = 'historicoEventos';
     } else {
-      const indexOriginal = historicoRefeicoes.length - 1 - indexReverso;
-      historicoRefeicoes.splice(indexOriginal, 1);
-      localStorage.setItem("historicoRefeicoes", JSON.stringify(historicoRefeicoes));
+      historico = historicoRefeicoes;
+      chaveStorage = 'historicoRefeicoes';
     }
+    const indexOriginal = historico.length - 1 - indexReverso;
+    historico.splice(indexOriginal, 1);
+    localStorage.setItem(chaveStorage, JSON.stringify(historico));
     renderizarHistorico(tipo);
   }
 }
@@ -874,3 +871,5 @@ function mostrarEcradeInputSugestao() {
     document.getElementById('sugestao-input-container').style.display = 'block';
     document.getElementById('sugestao-resultado-container').style.display = 'none';
 }
+
+// ... (Resto das funções que não foram alteradas)
